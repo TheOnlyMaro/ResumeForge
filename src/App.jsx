@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import Builder, { buildPdf } from './Builder.jsx'
 
 function App() {
   const [isDark, setIsDark] = useState(true)
+  const [route, setRoute] = useState(window.location.pathname)
 
   useEffect(() => {
     const root = document.documentElement
@@ -11,6 +13,27 @@ function App() {
       root.classList.remove('dark')
     }
   }, [isDark])
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setRoute(window.location.pathname)
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  const navigate = (path) => {
+    if (window.location.pathname === path) {
+      return
+    }
+    window.history.pushState({}, '', path)
+    setRoute(path)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  if (route === '/builder') {
+    return <Builder onNavigate={navigate} />
+  }
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
@@ -50,6 +73,10 @@ function App() {
           <a
             className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-900 hover:text-white"
             href="/builder"
+            onClick={(event) => {
+              event.preventDefault()
+              navigate('/builder')
+            }}
           >
             Open Resume Maker
           </a>
@@ -74,6 +101,11 @@ function App() {
               <a
                 className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-900 hover:text-white"
                 href="/builder"
+                onClick={(event) => {
+                  event.preventDefault()
+                  buildPdf()
+                  navigate('/builder')
+                }}
               >
                 Start building
               </a>
@@ -126,6 +158,10 @@ function App() {
             <a
               className="mt-5 inline-flex rounded-full border border-slate-700 px-5 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500"
               href="/builder"
+              onClick={(event) => {
+                event.preventDefault()
+                navigate('/builder')
+              }}
             >
               Open the builder
             </a>
