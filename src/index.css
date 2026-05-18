@@ -1,14 +1,22 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap');
 
 :root {
   color-scheme: light;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #0f172a;
 }
 
 body {
   margin: 0;
+  background-color: #0f172a;
+}
+
+::selection {
+  background: rgba(148, 163, 184, 0.35);
+  color: #f8fafc;
 }
