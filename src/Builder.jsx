@@ -221,43 +221,157 @@ export async function buildPdf(resume = defaultResume) {
 function Builder({ onNavigate }) {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-10">
-        <div className="flex items-center justify-between">
+      <div className="mx-auto flex w-full max-w-none flex-col gap-8 px-2 py-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-slate-400">
-              Resume Forge
-            </p>
-            <h1 className="text-3xl font-semibold text-white">
-              Resume Builder
-            </h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="rounded-full border border-slate-700 px-3 py-1 text-sm uppercase tracking-[0.3em] text-slate-400">
+                Resume Forge
+              </span>
+              <h1 className="text-3xl font-semibold text-white">
+                Resume Builder
+              </h1>
+            </div>
             <p className="mt-2 text-sm text-slate-300">
-              Harvard template (bulleted) - sample output only.
+              Harvard template (bulleted) - builder UI scaffold.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => onNavigate?.('/')}
-            className="rounded-full border border-slate-700 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-slate-500"
-          >
-            Back home
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={async () => {
+                await buildPdf()
+              }}
+              className="rounded-full bg-white px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 transition hover:bg-slate-900 hover:text-white"
+            >
+              Generate PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate?.('/')}
+              className="rounded-full border border-slate-700 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-slate-500"
+            >
+              Back home
+            </button>
+          </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-8">
-          <p className="text-sm text-slate-300">
-            Click below to generate a sample PDF using default data. This is a
-            placeholder for the full builder UI (sections, drag-and-drop,
-            checkboxes, and JSON persistence).
-          </p>
-          <button
-            type="button"
-            onClick={async () => {
-              await buildPdf()
-            }}
-            className="mt-6 rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-900 hover:text-white"
-          >
-            Generate sample PDF
-          </button>
+        <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr_1fr]">
+          <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-300">
+                Library
+              </h2>
+              <span className="text-xs text-slate-500">Drag into resume</span>
+            </div>
+            <div className="flex flex-col gap-3">
+              {['Experience', 'Projects', 'Skills', 'Certifications'].map(
+                (item) => (
+                  <div
+                    key={item}
+                    className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/40 px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-slate-500">::</span>
+                      <span className="text-sm text-slate-200">{item}</span>
+                    </div>
+                    <span className="text-xs text-slate-500">Drag</span>
+                  </div>
+                ),
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-slate-800 bg-slate-900/40 p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-300">
+                Live PDF
+              </h2>
+              <span className="text-xs text-slate-500">Preview</span>
+            </div>
+            <div className="flex h-[520px] items-center justify-center rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 text-sm text-slate-500">
+              PDF preview will render here
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-300">
+                Resume Items
+              </h2>
+              <span className="text-xs text-slate-500">Toggle or remove</span>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-slate-500">::</span>
+                    <span className="text-sm font-semibold text-slate-100">
+                      Title
+                    </span>
+                    <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] uppercase text-slate-400">
+                      Locked
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-full border border-slate-700 px-2 py-1 text-[10px] uppercase text-slate-400"
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
+
+              {[
+                {
+                  title: 'Education',
+                  items: ['B.Sc. Visual Communication', 'Honors thesis'],
+                },
+                {
+                  title: 'Experience',
+                  items: ['Lead Product Designer', 'Product Designer'],
+                },
+              ].map((section) => (
+                <div
+                  key={section.title}
+                  className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3"
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-slate-500">::</span>
+                      <span className="text-sm font-semibold text-slate-100">
+                        {section.title}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-full border border-slate-700 px-2 py-1 text-[10px] uppercase text-slate-400"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {section.items.map((item) => (
+                      <div
+                        key={item}
+                        className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2"
+                      >
+                        <div className="flex items-center gap-3">
+                          <input type="checkbox" defaultChecked />
+                          <span className="text-xs text-slate-200">{item}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] uppercase text-slate-400">
+                          <button type="button">Edit</button>
+                          <button type="button">X</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
       </div>
     </div>
