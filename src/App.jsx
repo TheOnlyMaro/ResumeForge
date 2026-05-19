@@ -101,9 +101,9 @@ function App() {
               <a
                 className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-900 hover:text-white"
                 href="/builder"
-                onClick={(event) => {
+                onClick={async (event) => {
                   event.preventDefault()
-                  buildPdf()
+                  await buildPdf()
                   navigate('/builder')
                 }}
               >

@@ -43,64 +43,147 @@ const defaultResume = {
   ],
 }
 
-export function buildPdf(resume = defaultResume) {
+const calibriFiles = {
+  normal: '/Fonts/calibri-font-family/calibri-regular.ttf',
+  bold: '/Fonts/calibri-font-family/calibri-bold.ttf',
+  italic: '/Fonts/calibri-font-family/calibri-italic.ttf',
+  bolditalic: '/Fonts/calibri-font-family/calibri-bold-italic.ttf',
+}
+
+const calibriCache = {
+  normal: null,
+  bold: null,
+  italic: null,
+  bolditalic: null,
+}
+
+let calibriLoadPromise = null
+
+const arrayBufferToBase64 = (buffer) => {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  const chunkSize = 0x8000
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
+  }
+  return btoa(binary)
+}
+
+const loadCalibriFonts = async () => {
+  if (calibriLoadPromise) {
+    return calibriLoadPromise
+  }
+
+  calibriLoadPromise = Promise.all(
+    Object.entries(calibriFiles).map(async ([style, path]) => {
+      if (calibriCache[style]) {
+        return
+      }
+      const response = await fetch(path)
+      if (!response.ok) {
+        throw new Error(`Failed to load font: ${path}`)
+      }
+      const buffer = await response.arrayBuffer()
+      calibriCache[style] = arrayBufferToBase64(buffer)
+    }),
+  )
+
+  return calibriLoadPromise
+}
+
+const registerCalibriFonts = (doc) => {
+  doc.addFileToVFS('calibri-regular.ttf', calibriCache.normal)
+  doc.addFont('calibri-regular.ttf', 'Calibri', 'normal')
+  doc.addFileToVFS('calibri-bold.ttf', calibriCache.bold)
+  doc.addFont('calibri-bold.ttf', 'Calibri', 'bold')
+  doc.addFileToVFS('calibri-italic.ttf', calibriCache.italic)
+  doc.addFont('calibri-italic.ttf', 'Calibri', 'italic')
+  doc.addFileToVFS('calibri-bold-italic.ttf', calibriCache.bolditalic)
+  doc.addFont('calibri-bold-italic.ttf', 'Calibri', 'bolditalic')
+}
+
+export async function buildPdf(resume = defaultResume) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' })
+  await loadCalibriFonts()
+  registerCalibriFonts(doc)
+
   const pageWidth = doc.internal.pageSize.getWidth()
-  const margin = 56
-  let y = 64
+  const margin = 54
+  let y = 50
 
   const centerX = pageWidth / 2
   const leftX = margin
   const rightX = pageWidth - margin
 
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(20)
+  doc.setFont('Calibri', 'bold')
+  doc.setFontSize(18)
   doc.text(resume.name, centerX, y, { align: 'center' })
 
+  const nameWidth = doc.getTextWidth(resume.name)
+  doc.setLineWidth(1)
+  doc.line(centerX - nameWidth / 2, y + 2, centerX + nameWidth / 2, y + 2)
+
   y += 18
-  doc.setFont('helvetica', 'italic')
-  doc.setFontSize(11)
+  doc.setFont('Calibri', 'italic')
+  doc.setFontSize(12)
   doc.text(resume.subtitle, centerX, y, { align: 'center' })
 
-  y += 16
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
+  y += 14
+  doc.setFont('Calibri', 'bold')
+  doc.setFontSize(11)
   const contactLine = resume.contact.join(' | ')
   doc.text(contactLine, centerX, y, { align: 'center' })
 
-  y += 24
+  y += 16
 
   const drawSectionTitle = (title) => {
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(11)
+    doc.setFont('Calibri', 'bold')
+    doc.setFontSize(12)
     doc.text(title, leftX, y)
-    y += 6
-    doc.setDrawColor(148, 163, 184)
+    y += 3
+    doc.setDrawColor(0, 0, 0)
+    doc.setLineWidth(0.8)
     doc.line(leftX, y, rightX, y)
-    y += 12
+    y += 9
   }
 
   const drawLinePair = (leftText, rightText, style = 'normal') => {
-    doc.setFont('helvetica', style)
+    doc.setFont('Calibri', style)
     doc.setFontSize(11)
-    doc.text(leftText, leftX, y)
-    doc.text(rightText, rightX, y, { align: 'right' })
-    y += 14
-  }
-
-  const drawSubLinePair = (leftText, rightText) => {
-    doc.setFont('helvetica', 'italic')
-    doc.setFontSize(10)
     doc.text(leftText, leftX, y)
     doc.text(rightText, rightX, y, { align: 'right' })
     y += 12
   }
 
-  const drawBullets = (bullets) => {
-    doc.setFont('helvetica', 'normal')
+  const drawSubLinePair = (leftText, rightText) => {
+    doc.setFont('Calibri', 'italic')
     doc.setFontSize(10)
+    doc.text(leftText, leftX, y)
+    doc.text(rightText, rightX, y, { align: 'right' })
+    y += 11
+  }
+
+  const drawBullets = (bullets) => {
+    const bulletIndent = 18
+    const bulletRadius = 1.6
     bullets.forEach((bullet) => {
-      doc.text(`- ${bullet}`, leftX + 12, y)
+      const [label, rest] = bullet.split(/:(.+)/)
+      doc.setDrawColor(0, 0, 0)
+      doc.setFillColor(0, 0, 0)
+      doc.circle(leftX + 6, y - 3, bulletRadius, 'F')
+      if (rest) {
+        doc.setFont('Calibri', 'bold')
+        doc.setFontSize(10)
+        const labelText = `${label.trim()}:`
+        doc.text(labelText, leftX + bulletIndent, y)
+        const labelWidth = doc.getTextWidth(labelText)
+        doc.setFont('Calibri', 'normal')
+        doc.text(rest.trim(), leftX + bulletIndent + labelWidth + 4, y)
+      } else {
+        doc.setFont('Calibri', 'normal')
+        doc.setFontSize(10)
+        doc.text(bullet, leftX + bulletIndent, y)
+      }
       y += 12
     })
   }
@@ -128,7 +211,7 @@ export function buildPdf(resume = defaultResume) {
   })
 
   drawSectionTitle('LANGUAGES')
-  doc.setFont('helvetica', 'normal')
+  doc.setFont('Calibri', 'normal')
   doc.setFontSize(10)
   doc.text(resume.languages.join(' | '), leftX, y)
 
@@ -168,7 +251,9 @@ function Builder({ onNavigate }) {
           </p>
           <button
             type="button"
-            onClick={() => buildPdf()}
+            onClick={async () => {
+              await buildPdf()
+            }}
             className="mt-6 rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-900 hover:text-white"
           >
             Generate sample PDF
