@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { DndContext, DragOverlay } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import { defaultResume } from './data/defaultResume'
@@ -132,9 +132,6 @@ function Builder({ onNavigate }) {
     ],
   })
   const [libraryActiveSection, setLibraryActiveSection] = useState('Experience')
-  const [selectedResumeSectionId, setSelectedResumeSectionId] = useState(
-    resumeSections[0]?.id ?? null,
-  )
   const [modalState, setModalState] = useState({
     open: false,
     mode: 'add',
@@ -147,6 +144,10 @@ function Builder({ onNavigate }) {
   const [activeDragItem, setActiveDragItem] = useState(null)
   const [activeDragSection, setActiveDragSection] = useState(null)
   const [librarySectionInsertIndex, setLibrarySectionInsertIndex] = useState(-1)
+  const [libraryItemInsert, setLibraryItemInsert] = useState({
+    sectionId: null,
+    index: -1,
+  })
   const [dismissNotice, setDismissNotice] = useState({
     visible: false,
     message: '',
@@ -196,18 +197,6 @@ function Builder({ onNavigate }) {
       .map((line) => line.trim())
       .filter(Boolean)
 
-  useEffect(() => {
-    if (!resumeSections.length) {
-      setSelectedResumeSectionId(null)
-      return
-    }
-    const stillExists = resumeSections.some(
-      (section) => section.id === selectedResumeSectionId,
-    )
-    if (!stillExists) {
-      setSelectedResumeSectionId(resumeSections[0].id)
-    }
-  }, [resumeSections, selectedResumeSectionId])
 
   const getLibraryItemType = (item) => item.type || 'custom'
 
@@ -773,6 +762,7 @@ function Builder({ onNavigate }) {
     setActiveDragItem(null)
     setActiveDragSection(null)
     setLibrarySectionInsertIndex(-1)
+    setLibraryItemInsert({ sectionId: null, index: -1 })
     if (!over || active.id === over.id) {
       return
     }
@@ -912,6 +902,7 @@ function Builder({ onNavigate }) {
       setActiveDragItem(event.active.data.current?.item ?? null)
       setActiveDragSection(null)
       setLibrarySectionInsertIndex(-1)
+      setLibraryItemInsert({ sectionId: null, index: -1 })
     } else if (activeType === 'library-section') {
       setActiveDragSection({
         title: event.active.data.current?.title ?? 'Section',
@@ -919,21 +910,53 @@ function Builder({ onNavigate }) {
       })
       setActiveDragItem(null)
       setLibrarySectionInsertIndex(resumeSections.length)
+      setLibraryItemInsert({ sectionId: null, index: -1 })
     } else {
       setActiveDragItem(null)
       setActiveDragSection(null)
       setLibrarySectionInsertIndex(-1)
+      setLibraryItemInsert({ sectionId: null, index: -1 })
     }
   }
 
   const handleDragOver = (event) => {
     const activeType = event.active.data.current?.type
-    if (activeType !== 'library-section') {
+    const overType = event.over?.data.current?.type
+    if (!event.over || !overType) {
       return
     }
 
-    const overType = event.over?.data.current?.type
-    if (!event.over || !overType) {
+    if (activeType === 'library-item') {
+      if (overType !== 'section' && overType !== 'item') {
+        return
+      }
+      const targetSectionId =
+        overType === 'item' ? event.over.data.current?.sectionId : event.over.id
+      const targetSection = resumeSections.find(
+        (section) => section.id === targetSectionId,
+      )
+      if (!targetSection) {
+        setLibraryItemInsert({ sectionId: null, index: -1 })
+        return
+      }
+      if (overType === 'item') {
+        const overIndex = targetSection.items.findIndex(
+          (item) => item.id === event.over.id,
+        )
+        setLibraryItemInsert({
+          sectionId: targetSectionId,
+          index: overIndex >= 0 ? overIndex + 1 : targetSection.items.length,
+        })
+      } else {
+        setLibraryItemInsert({
+          sectionId: targetSectionId,
+          index: targetSection.items.length,
+        })
+      }
+      return
+    }
+
+    if (activeType !== 'library-section') {
       return
     }
 
@@ -1018,8 +1041,6 @@ function Builder({ onNavigate }) {
             <LivePdfPanel />
             <ResumePanel
               resumeSections={resumeSections}
-              selectedResumeSectionId={selectedResumeSectionId}
-              onSelectSection={setSelectedResumeSectionId}
               onToggleItem={toggleItem}
               onRemoveItem={removeItem}
               onRemoveSection={removeSection}
@@ -1030,6 +1051,8 @@ function Builder({ onNavigate }) {
               onEditTitle={openEditTitle}
               activeDragSection={activeDragSection}
               insertIndex={librarySectionInsertIndex}
+              activeDragItem={activeDragItem}
+              libraryItemInsert={libraryItemInsert}
             />
           </div>
           <DragOverlay>

@@ -11,14 +11,14 @@ function LibraryPanel({
   return (
     <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-300">
+        <h2 className="text-base font-semibold uppercase tracking-[0.3em] text-slate-300">
           Library
         </h2>
         <span className="text-xs text-slate-500">Drag into resume</span>
       </div>
       <div className="flex flex-col gap-4">
         <details open className="border-b border-slate-800 pb-4">
-          <summary className="flex cursor-pointer items-center justify-between px-1 py-2 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-200">
+          <summary className="flex cursor-pointer items-center justify-between px-1 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-slate-200">
             <span className="flex items-center gap-2">
               <span className="text-slate-500">▾</span>
               Resume Sections
@@ -49,7 +49,7 @@ function LibraryPanel({
         </details>
 
         <details open className="pt-4">
-          <summary className="flex cursor-pointer items-center justify-between px-1 py-2 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-200">
+          <summary className="flex cursor-pointer items-center justify-between px-1 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-slate-200">
             <span className="flex items-center gap-2">
               <span className="text-slate-500">▾</span>
               Resume Items
@@ -66,6 +66,9 @@ function LibraryPanel({
               Add
             </button>
           </summary>
+          <p className="px-1 pb-2 text-xs uppercase tracking-[0.3em] text-amber-200/80">
+            {libraryActiveSection}
+          </p>
           <div className="flex flex-col gap-3">
             {(libraryItems[libraryActiveSection] ?? []).map((item) => (
               <LibraryDraggableItem key={item.id} item={item} />

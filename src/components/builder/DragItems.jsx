@@ -14,8 +14,8 @@ export function SortableSectionCard({
   onAddItem,
   onEditSection,
   onEditItem,
-  onSelectSection,
-  selected,
+  activeDragItem,
+  libraryItemInsert,
 }) {
   const {
     attributes,
@@ -29,20 +29,23 @@ export function SortableSectionCard({
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0 : 1,
+    transition: isDragging ? 'none' : transition,
+    opacity: isDragging ? 0.6 : 1,
   }
+
+  const showItemInsert =
+    activeDragItem && libraryItemInsert?.sectionId === section.id
+  const itemInsertIndex = showItemInsert ? libraryItemInsert.index : -1
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`rounded-2xl border bg-slate-950/40 p-3 transition hover:border-slate-700 ${
-        selected
-          ? 'border-amber-400/60 shadow-[0_0_0_1px_rgba(251,191,36,0.4)]'
+      className={`rounded-2xl border bg-slate-950/40 p-3 transition hover:border-slate-700 will-change-transform ${
+        isDragging
+          ? 'border-amber-400/70 shadow-[0_0_0_1px_rgba(251,191,36,0.5)]'
           : 'border-slate-800'
       }`}
-      onClick={() => onSelectSection?.(section.id)}
     >
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -82,16 +85,27 @@ export function SortableSectionCard({
         strategy={verticalListSortingStrategy}
       >
         <div className="flex flex-col gap-2">
-          {section.items.map((item) => (
-            <SortableItemRow
-              key={item.id}
-              item={item}
-              sectionId={section.id}
-              onToggleItem={onToggleItem}
-              onRemoveItem={onRemoveItem}
-              onEditItem={onEditItem}
-            />
+          {section.items.map((item, index) => (
+            <div key={item.id} className="flex flex-col gap-2">
+              {showItemInsert && itemInsertIndex === index && (
+                <div className="rounded-xl border border-amber-400/70 bg-amber-500/10 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-amber-100">
+                  Drop item here
+                </div>
+              )}
+              <SortableItemRow
+                item={item}
+                sectionId={section.id}
+                onToggleItem={onToggleItem}
+                onRemoveItem={onRemoveItem}
+                onEditItem={onEditItem}
+              />
+            </div>
           ))}
+          {showItemInsert && itemInsertIndex === section.items.length && (
+            <div className="rounded-xl border border-amber-400/70 bg-amber-500/10 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-amber-100">
+              Drop item here
+            </div>
+          )}
         </div>
       </SortableContext>
     </div>
@@ -117,15 +131,19 @@ export function SortableItemRow({
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0 : 1,
+    transition: isDragging ? 'none' : transition,
+    opacity: isDragging ? 0.6 : 1,
   }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2 transition hover:border-slate-700 hover:bg-slate-900/80"
+      className={`flex items-center justify-between rounded-xl border bg-slate-900/60 px-3 py-2 transition hover:border-slate-700 hover:bg-slate-900/80 will-change-transform ${
+        isDragging
+          ? 'border-amber-400/70 shadow-[0_0_0_1px_rgba(251,191,36,0.5)]'
+          : 'border-slate-800'
+      }`}
     >
       <div className="flex items-center gap-3">
         <button

@@ -4,8 +4,6 @@ import { SortableSectionCard } from './DragItems'
 
 function ResumePanel({
   resumeSections,
-  selectedResumeSectionId,
-  onSelectSection,
   onToggleItem,
   onRemoveItem,
   onRemoveSection,
@@ -16,14 +14,14 @@ function ResumePanel({
   onEditTitle,
   activeDragSection,
   insertIndex,
+  activeDragItem,
+  libraryItemInsert,
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: 'resume-root',
     data: { type: 'resume-root' },
+    disabled: !activeDragSection,
   })
-  const selectedTitle =
-    resumeSections.find((section) => section.id === selectedResumeSectionId)
-      ?.title || 'No section selected'
 
   const shouldShowInsert =
     activeDragSection && insertIndex !== undefined && insertIndex >= 0
@@ -64,9 +62,6 @@ function ResumePanel({
           <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-300">
             Resume Items
           </h2>
-          <p className="mt-1 text-xs uppercase tracking-[0.3em] text-amber-200/80">
-            {selectedTitle}
-          </p>
         </div>
         <button
           type="button"
@@ -119,8 +114,8 @@ function ResumePanel({
                 onAddItem={onAddItem}
                 onEditSection={onEditSection}
                 onEditItem={onEditItem}
-                onSelectSection={onSelectSection}
-                selected={section.id === selectedResumeSectionId}
+                activeDragItem={activeDragItem}
+                libraryItemInsert={libraryItemInsert}
               />
             ),
           )}
