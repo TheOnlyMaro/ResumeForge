@@ -1,3 +1,4 @@
+import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { SortableSectionCard } from './DragItems'
 
@@ -10,19 +11,21 @@ function ResumePanel({
   onEditSection,
   onEditItem,
   onEditTitle,
-  resumeDropRef,
-  isResumeDropOver,
   activeDragSection,
 }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'resume-root',
+    data: { type: 'resume-root' },
+  })
   const selectedTitle =
     resumeSections.find((section) => section.id === selectedResumeSectionId)
       ?.title || 'No section selected'
 
   return (
     <section
-      ref={resumeDropRef}
+      ref={setNodeRef}
       className={`rounded-3xl border bg-slate-900/60 p-6 transition ${
-        isResumeDropOver && activeDragSection
+        isOver && activeDragSection
           ? 'border-amber-400/60 shadow-[0_0_0_1px_rgba(251,191,36,0.4)]'
           : 'border-slate-800'
       }`}

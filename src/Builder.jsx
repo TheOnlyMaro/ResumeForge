@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { DndContext, DragOverlay, useDroppable } from '@dnd-kit/core'
+import { DndContext, DragOverlay } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import { defaultResume } from './data/defaultResume'
 import { buildResumePdf } from './pdf/buildResumePdf'
@@ -146,12 +146,6 @@ function Builder({ onNavigate }) {
   })
   const [activeDragItem, setActiveDragItem] = useState(null)
   const [activeDragSection, setActiveDragSection] = useState(null)
-  const { setNodeRef: setResumeDropRef, isOver: isResumeDropOver } = useDroppable(
-    {
-      id: 'resume-root',
-      data: { type: 'resume-root' },
-    },
-  )
   const [dismissNotice, setDismissNotice] = useState({
     visible: false,
     message: '',
@@ -773,36 +767,38 @@ function Builder({ onNavigate }) {
     ) {
       const sectionTitle = active.data.current?.title
       const sectionItems = active.data.current?.items ?? []
-      const targetSectionId =
-        overType === 'item' ? over.data.current?.sectionId : over.id
       if (!sectionTitle) {
         return
       }
 
-      if (overType === 'resume-root') {
-        setResumeSections((sections) => [
-          ...sections,
-          buildResumeSectionFromLibrary(sectionTitle, sectionItems),
-        ])
-        return
-      }
-
-      if (!targetSectionId) {
-        return
-      }
-
-      setResumeSections((sections) =>
-        sections.map((section) => {
-          if (section.id !== targetSectionId) {
-            return section
-          }
-          const nextItems = [...section.items]
-          sectionItems.forEach((libraryItem) => {
-            nextItems.push(buildResumeItemFromLibrary(libraryItem, section.title))
-          })
-          return { ...section, items: nextItems }
-        }),
+      const newSection = buildResumeSectionFromLibrary(
+        sectionTitle,
+        sectionItems,
       )
+
+      if (overType === 'resume-root') {
+        setResumeSections((sections) => [...sections, newSection])
+        return
+      }
+
+      const targetSectionId =
+        overType === 'item' ? over.data.current?.sectionId : over.id
+      if (!targetSectionId) {
+        setResumeSections((sections) => [...sections, newSection])
+        return
+      }
+
+      setResumeSections((sections) => {
+        const targetIndex = sections.findIndex(
+          (section) => section.id === targetSectionId,
+        )
+        if (targetIndex === -1) {
+          return [...sections, newSection]
+        }
+        const nextSections = [...sections]
+        nextSections.splice(targetIndex + 1, 0, newSection)
+        return nextSections
+      })
       return
     }
 
@@ -961,8 +957,6 @@ function Builder({ onNavigate }) {
               onEditSection={openEditSection}
               onEditItem={openEditItem}
               onEditTitle={openEditTitle}
-              resumeDropRef={setResumeDropRef}
-              isResumeDropOver={isResumeDropOver}
               activeDragSection={activeDragSection}
             />
           </div>

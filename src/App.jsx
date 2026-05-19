@@ -169,7 +169,7 @@ function App() {
           </div>
           <ol className="grid gap-5 text-sm text-slate-300">
             {[
-              'Import or paste your master CV once.',
+              'Import or create your master CV once.',
               'Toggle, trim, and reorder sections for the role.',
               'Export a polished PDF instantly.',
             ].map((step, index) => (
