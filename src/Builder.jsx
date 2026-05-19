@@ -233,19 +233,170 @@ function Builder({ onNavigate }) {
       id: 'education',
       title: 'Education',
       items: [
-        { id: 'edu-1', label: 'B.Sc. Visual Communication', enabled: true },
-        { id: 'edu-2', label: 'Honors thesis', enabled: true },
+        {
+          id: 'edu-1',
+          type: 'education',
+          label: 'School of Design - Harvard University',
+          degree: 'School of Design',
+          school: 'Harvard University',
+          location: 'Cambridge, MA',
+          field: 'B.Sc. in Visual Communication',
+          dates: '2016 - 2020',
+          bullets: ['Honors thesis on accessible product systems'],
+          enabled: true,
+        },
       ],
     },
     {
       id: 'experience',
       title: 'Experience',
       items: [
-        { id: 'exp-1', label: 'Lead Product Designer', enabled: true },
-        { id: 'exp-2', label: 'Product Designer', enabled: true },
+        {
+          id: 'exp-1',
+          type: 'custom',
+          label: 'Lead Product Designer',
+          name: 'Lead Product Designer',
+          location: 'Remote',
+          subtitle: 'Forge Studio',
+          dates: '2022 - Present',
+          details: [
+            'Designed 12 resume templates used by 40k+ job seekers.',
+            'Reduced editing time by 45% with modular section controls.',
+          ],
+          enabled: true,
+        },
       ],
     },
   ])
+  const [titleData, setTitleData] = useState({
+    name: defaultResume.name,
+    subtitle: defaultResume.subtitle,
+    contact: defaultResume.contact.join(' | '),
+  })
+  const [librarySections, setLibrarySections] = useState([
+    'Experience',
+    'Projects',
+    'Skills',
+  ])
+  const [libraryItems, setLibraryItems] = useState({
+    Experience: [
+      {
+        id: 'lib-exp-1',
+        type: 'custom',
+        label: 'Portfolio review',
+        subtitle: 'Forge Studio',
+        location: 'Remote',
+        dates: '2022 - Present',
+        details: ['Led product review sessions', 'Improved UX clarity'],
+      },
+      {
+        id: 'lib-exp-2',
+        type: 'custom',
+        label: 'Leadership',
+        subtitle: 'Design Guild',
+        location: 'Boston, MA',
+        dates: '2020 - 2022',
+        details: ['Mentored junior designers', 'Ran weekly crits'],
+      },
+      {
+        id: 'lib-exp-3',
+        type: 'custom',
+        label: 'Optimization',
+        subtitle: 'Sprint Ops',
+        location: 'Austin, TX',
+        dates: '2019 - 2020',
+        details: ['Reduced handoff time by 20%'],
+      },
+    ],
+    Projects: [
+      {
+        id: 'lib-proj-1',
+        type: 'custom',
+        label: 'Case study',
+        subtitle: 'Mobile onboarding',
+        location: 'Remote',
+        dates: '2023',
+        details: ['Boosted conversion by 12%'],
+      },
+      {
+        id: 'lib-proj-2',
+        type: 'custom',
+        label: 'Product launch',
+        subtitle: 'B2B dashboard',
+        location: 'Remote',
+        dates: '2022',
+        details: ['Shipped MVP in 6 weeks'],
+      },
+    ],
+    Skills: [
+      {
+        id: 'lib-skill-1',
+        type: 'custom',
+        label: 'Design systems',
+        subtitle: '',
+        location: '',
+        dates: '',
+        details: ['Tokens, components, accessibility'],
+      },
+      {
+        id: 'lib-skill-2',
+        type: 'custom',
+        label: 'User research',
+        subtitle: '',
+        location: '',
+        dates: '',
+        details: ['Interviews, surveys, synthesis'],
+      },
+    ],
+  })
+  const [libraryActiveSection, setLibraryActiveSection] = useState('Experience')
+  const [modalState, setModalState] = useState({
+    open: false,
+    mode: 'add',
+    type: 'item',
+    target: 'resume',
+    itemType: 'custom',
+    sectionId: null,
+    itemId: null,
+  })
+  const [modalForm, setModalForm] = useState({
+    title: '',
+    itemName: '',
+    sectionId: '',
+    name: '',
+    subtitle: '',
+    contact: '',
+    degree: '',
+    school: '',
+    location: '',
+    field: '',
+    dates: '',
+    bullets: '',
+    details: '',
+    languages: '',
+  })
+  const getSectionKind = (sectionTitle = '') => {
+    const title = sectionTitle.toLowerCase()
+    if (title.includes('education')) {
+      return 'education'
+    }
+    if (title.includes('language')) {
+      return 'language'
+    }
+    return 'custom'
+  }
+
+  const splitLines = (value) =>
+    value
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+
+  const splitList = (value) =>
+    value
+      .split(/[\n,]/)
+      .map((line) => line.trim())
+      .filter(Boolean)
   const toggleItem = (sectionId, itemId) => {
     setResumeSections((sections) =>
       sections.map((section) => {
@@ -264,45 +415,418 @@ function Builder({ onNavigate }) {
     )
   }
 
+  const openAddSection = (target = 'resume') => {
+    setModalForm({
+      title: '',
+      itemName: '',
+      sectionId: '',
+      name: '',
+      subtitle: '',
+      contact: '',
+      degree: '',
+      school: '',
+      location: '',
+      field: '',
+      dates: '',
+      bullets: '',
+      details: '',
+      languages: '',
+    })
+    setModalState({
+      open: true,
+      mode: 'add',
+      type: 'section',
+      target,
+      itemType: 'custom',
+      sectionId: null,
+      itemId: null,
+    })
+  }
+
+  const openAddItem = (sectionId = '', target = 'resume') => {
+    const resolvedTitle =
+      target === 'library'
+        ? libraryActiveSection
+        : resumeSections.find((section) => section.id === sectionId)?.title
+    const itemType = getSectionKind(resolvedTitle || '')
+    setModalForm({
+      title: '',
+      itemName: '',
+      sectionId,
+      name: '',
+      subtitle: '',
+      contact: '',
+      degree: '',
+      school: '',
+      location: '',
+      field: '',
+      dates: '',
+      bullets: '',
+      details: '',
+      languages: '',
+    })
+    setModalState({
+      open: true,
+      mode: 'add',
+      type: 'item',
+      target,
+      itemType,
+      sectionId,
+      itemId: null,
+    })
+  }
+
+  const openEditItem = (sectionId, itemId) => {
+    const section = resumeSections.find((item) => item.id === sectionId)
+    const item = section?.items.find((entry) => entry.id === itemId)
+    setModalForm({
+      title: '',
+      itemName: item?.name ?? item?.label ?? '',
+      sectionId: sectionId ?? '',
+      name: '',
+      subtitle: item?.subtitle ?? '',
+      contact: '',
+      degree: item?.degree ?? '',
+      school: item?.school ?? '',
+      location: item?.location ?? '',
+      field: item?.field ?? '',
+      dates: item?.dates ?? '',
+      bullets: (item?.bullets ?? []).join('\n'),
+      details: (item?.details ?? []).join('\n'),
+      languages: (item?.languages ?? []).join('\n'),
+    })
+    setModalState({
+      open: true,
+      mode: 'edit',
+      type: 'item',
+      target: 'resume',
+      itemType: item?.type ?? getSectionKind(section?.title ?? ''),
+      sectionId,
+      itemId,
+    })
+  }
+
+  const openEditSection = (sectionId) => {
+    const section = resumeSections.find((item) => item.id === sectionId)
+    setModalForm({
+      title: section?.title ?? '',
+      itemName: '',
+      sectionId: sectionId ?? '',
+      name: '',
+      subtitle: '',
+      contact: '',
+      degree: '',
+      school: '',
+      location: '',
+      field: '',
+      dates: '',
+      bullets: '',
+      details: '',
+      languages: '',
+    })
+    setModalState({
+      open: true,
+      mode: 'edit',
+      type: 'section',
+      target: 'resume',
+      itemType: 'custom',
+      sectionId,
+      itemId: null,
+    })
+  }
+
+  const openEditTitle = () => {
+    setModalForm((prev) => ({
+      ...prev,
+      name: titleData.name,
+      subtitle: titleData.subtitle,
+      contact: titleData.contact,
+    }))
+    setModalState({
+      open: true,
+      mode: 'edit',
+      type: 'title',
+      target: 'resume',
+      itemType: 'custom',
+      sectionId: null,
+      itemId: null,
+    })
+  }
+
+  const closeModal = () => {
+    setModalState({
+      open: false,
+      mode: 'add',
+      type: 'item',
+      target: 'resume',
+      itemType: 'custom',
+      sectionId: null,
+      itemId: null,
+    })
+  }
+
+  const handleModalSubmit = (event) => {
+    event.preventDefault()
+    if (modalState.type === 'title') {
+      setTitleData({
+        name: modalForm.name.trim() || titleData.name,
+        subtitle: modalForm.subtitle.trim() || titleData.subtitle,
+        contact: modalForm.contact.trim() || titleData.contact,
+      })
+      closeModal()
+      return
+    }
+    if (modalState.type === 'section') {
+      if (modalState.target === 'library') {
+        if (modalState.mode === 'add' && modalForm.title.trim()) {
+          setLibrarySections((sections) => [
+            ...sections,
+            modalForm.title.trim(),
+          ])
+          setLibraryItems((items) => ({
+            ...items,
+            [modalForm.title.trim()]: [],
+          }))
+        }
+      } else {
+        if (modalState.mode === 'add' && modalForm.title.trim()) {
+          const newId = `section-${Date.now()}`
+          setResumeSections((sections) => [
+            ...sections,
+            { id: newId, title: modalForm.title.trim(), items: [] },
+          ])
+        }
+        if (modalState.mode === 'edit' && modalForm.title.trim()) {
+          setResumeSections((sections) =>
+            sections.map((section) =>
+              section.id === modalState.sectionId
+                ? { ...section, title: modalForm.title.trim() }
+                : section,
+            ),
+          )
+        }
+      }
+    }
+
+    if (modalState.type === 'item') {
+      if (modalState.target === 'library') {
+        const hasRequiredField =
+          modalState.itemType === 'education'
+            ? modalForm.degree.trim() || modalForm.school.trim()
+            : modalState.itemType === 'language'
+              ? modalForm.languages.trim()
+              : modalForm.itemName.trim()
+        if (modalState.mode === 'add' && hasRequiredField) {
+          const targetSection =
+            modalForm.sectionId || libraryActiveSection || librarySections[0]
+          if (!targetSection) {
+            closeModal()
+            return
+          }
+          const newItemBase = {
+            id: `lib-item-${Date.now()}`,
+            type: modalState.itemType,
+            enabled: true,
+          }
+          const newItem =
+            modalState.itemType === 'education'
+              ? {
+                  ...newItemBase,
+                  label: `${modalForm.degree.trim()} - ${modalForm.school.trim()}`,
+                  degree: modalForm.degree.trim(),
+                  school: modalForm.school.trim(),
+                  location: modalForm.location.trim(),
+                  field: modalForm.field.trim(),
+                  dates: modalForm.dates.trim(),
+                  bullets: splitLines(modalForm.bullets),
+                }
+              : modalState.itemType === 'language'
+                ? {
+                    ...newItemBase,
+                    label: 'Languages',
+                    languages: splitList(modalForm.languages),
+                  }
+                : {
+                    ...newItemBase,
+                    label: modalForm.itemName.trim(),
+                    name: modalForm.itemName.trim(),
+                    subtitle: modalForm.subtitle.trim(),
+                    location: modalForm.location.trim(),
+                    dates: modalForm.dates.trim(),
+                    details: splitLines(modalForm.details),
+                  }
+          setLibraryItems((items) => ({
+            ...items,
+            [targetSection]: [...(items[targetSection] ?? []), newItem],
+          }))
+        }
+      } else {
+        const targetSectionId =
+          modalForm.sectionId || modalState.sectionId || resumeSections[0]?.id
+        const hasRequiredField =
+          modalState.itemType === 'education'
+            ? modalForm.degree.trim() || modalForm.school.trim()
+            : modalState.itemType === 'language'
+              ? modalForm.languages.trim()
+              : modalForm.itemName.trim()
+        if (!targetSectionId || !hasRequiredField) {
+          closeModal()
+          return
+        }
+
+        if (modalState.mode === 'add') {
+          const newId = `item-${Date.now()}`
+          setResumeSections((sections) =>
+            sections.map((section) =>
+              section.id === targetSectionId
+                ? {
+                    ...section,
+                    items: [
+                      ...section.items,
+                      modalState.itemType === 'education'
+                        ? {
+                            id: newId,
+                            type: 'education',
+                            label: `${modalForm.degree.trim()} - ${modalForm.school.trim()}`,
+                            degree: modalForm.degree.trim(),
+                            school: modalForm.school.trim(),
+                            location: modalForm.location.trim(),
+                            field: modalForm.field.trim(),
+                            dates: modalForm.dates.trim(),
+                            bullets: splitLines(modalForm.bullets),
+                            enabled: true,
+                          }
+                        : modalState.itemType === 'language'
+                          ? {
+                              id: newId,
+                              type: 'language',
+                              label: 'Languages',
+                              languages: splitList(modalForm.languages),
+                              enabled: true,
+                            }
+                          : {
+                              id: newId,
+                              type: 'custom',
+                              label: modalForm.itemName.trim(),
+                              name: modalForm.itemName.trim(),
+                              subtitle: modalForm.subtitle.trim(),
+                              location: modalForm.location.trim(),
+                              dates: modalForm.dates.trim(),
+                              details: splitLines(modalForm.details),
+                              enabled: true,
+                            },
+                    ],
+                  }
+                : section,
+            ),
+          )
+        }
+
+        if (modalState.mode === 'edit') {
+          setResumeSections((sections) =>
+            sections.map((section) =>
+              section.id === targetSectionId
+                ? {
+                    ...section,
+                    items: section.items.map((item) =>
+                      item.id === modalState.itemId
+                        ? modalState.itemType === 'education'
+                          ? {
+                              ...item,
+                              label: `${modalForm.degree.trim()} - ${modalForm.school.trim()}`,
+                              degree: modalForm.degree.trim(),
+                              school: modalForm.school.trim(),
+                              location: modalForm.location.trim(),
+                              field: modalForm.field.trim(),
+                              dates: modalForm.dates.trim(),
+                              bullets: splitLines(modalForm.bullets),
+                            }
+                          : modalState.itemType === 'language'
+                            ? {
+                                ...item,
+                                label: 'Languages',
+                                languages: splitList(modalForm.languages),
+                              }
+                            : {
+                                ...item,
+                                label: modalForm.itemName.trim(),
+                                name: modalForm.itemName.trim(),
+                                subtitle: modalForm.subtitle.trim(),
+                                location: modalForm.location.trim(),
+                                dates: modalForm.dates.trim(),
+                                details: splitLines(modalForm.details),
+                              }
+                        : item,
+                    ),
+                  }
+                : section,
+            ),
+          )
+        }
+      }
+    }
+
+    closeModal()
+  }
+
   const buildResumeFromState = () => {
-    const mapItemsToDetails = (items) =>
-      items
-        .filter((item) => item.enabled)
-        .map((item) => item.label)
-
     const educationSection = resumeSections.find(
-      (section) => section.id === 'education',
+      (section) => getSectionKind(section.title) === 'education',
     )
-    const experienceSection = resumeSections.find(
-      (section) => section.id === 'experience',
+    const languageSection = resumeSections.find(
+      (section) => getSectionKind(section.title) === 'language',
+    )
+    const customSections = resumeSections.filter(
+      (section) =>
+        !['education', 'language'].includes(getSectionKind(section.title)),
     )
 
-    const educationBullets = mapItemsToDetails(educationSection?.items ?? [])
-    const experienceDetails = mapItemsToDetails(experienceSection?.items ?? [])
+    const educationItems = (educationSection?.items ?? [])
+      .filter((item) => item.enabled)
+      .map((item) => ({
+        degree: item.degree || '',
+        school: item.school || '',
+        location: item.location || '',
+        subtitle: item.field || '',
+        dates: item.dates || '',
+        bullets: item.bullets || [],
+      }))
+
+    const sections = customSections
+      .map((section) => ({
+        title: section.title.toUpperCase(),
+        items: section.items
+          .filter((item) => item.enabled)
+          .map((item) => ({
+            title: item.name || item.label || '',
+            location: item.location || '',
+            subtitle: item.subtitle || '',
+            dates: item.dates || '',
+            details: item.details || [],
+          })),
+      }))
+      .filter((section) => section.items.length)
+
+    const languageItem = (languageSection?.items ?? []).find(
+      (item) => item.enabled,
+    )
+    const languages = languageItem?.languages?.length
+      ? languageItem.languages
+      : defaultResume.languages
 
     return {
       ...defaultResume,
-      education: educationBullets.length
-        ? [
-            {
-              ...defaultResume.education[0],
-              bullets: educationBullets,
-            },
-          ]
-        : [],
-      sections: experienceDetails.length
-        ? [
-            {
-              title: 'EXPERIENCE',
-              items: [
-                {
-                  ...defaultResume.sections[0].items[0],
-                  details: experienceDetails,
-                },
-              ],
-            },
-          ]
-        : [],
+      name: titleData.name || defaultResume.name,
+      subtitle: titleData.subtitle || defaultResume.subtitle,
+      contact: titleData.contact
+        ? titleData.contact
+            .split('|')
+            .map((entry) => entry.trim())
+            .filter(Boolean)
+        : defaultResume.contact,
+      education: educationItems,
+      sections,
+      languages,
     }
   }
 
@@ -352,8 +876,8 @@ function Builder({ onNavigate }) {
     }
   }
   return (
-    <div className="min-h-screen select-none bg-slate-950 text-slate-100">
-      <div className="mx-auto flex w-full max-w-none flex-col gap-8 px-2 py-6">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="mx-auto flex w-full max-w-none flex-col gap-8 px-2 py-6 select-none">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-3">
@@ -415,16 +939,26 @@ function Builder({ onNavigate }) {
                   </span>
                   <button
                     type="button"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      openAddSection('library')
+                    }}
                     className="rounded-md border border-slate-700 px-2 py-0.5 text-[10px] uppercase text-slate-400"
                   >
                     Add
                   </button>
                 </summary>
                 <div className="flex flex-col gap-3">
-                  {['Experience', 'Projects', 'Skills'].map((item) => (
+                  {librarySections.map((item) => (
                     <div
                       key={item}
-                      className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/40 px-4 py-3 transition hover:border-slate-700 hover:bg-slate-950/60"
+                      className={`flex items-center justify-between rounded-2xl border px-4 py-3 transition hover:border-slate-700 hover:bg-slate-950/60 ${
+                        libraryActiveSection === item
+                          ? 'border-slate-600 bg-slate-900/50'
+                          : 'border-slate-800 bg-slate-950/40'
+                      }`}
+                      onClick={() => setLibraryActiveSection(item)}
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-slate-500">::</span>
@@ -444,26 +978,29 @@ function Builder({ onNavigate }) {
                   </span>
                   <button
                     type="button"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      openAddItem('', 'library')
+                    }}
                     className="rounded-md border border-slate-700 px-2 py-0.5 text-[10px] uppercase text-slate-400"
                   >
                     Add
                   </button>
                 </summary>
                 <div className="flex flex-col gap-3">
-                  {['Portfolio review', 'Leadership', 'Optimization'].map(
-                    (item) => (
-                      <div
-                        key={item}
-                        className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/40 px-4 py-3 transition hover:border-slate-700 hover:bg-slate-950/60"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-slate-500">::</span>
-                          <span className="text-sm text-slate-200">{item}</span>
-                        </div>
-                        <span className="text-xs text-slate-500">Drag</span>
+                  {(libraryItems[libraryActiveSection] ?? []).map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/40 px-4 py-3 transition hover:border-slate-700 hover:bg-slate-950/60"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-slate-500">::</span>
+                        <span className="text-sm text-slate-200">{item.label}</span>
                       </div>
-                    ),
-                  )}
+                      <span className="text-xs text-slate-500">Drag</span>
+                    </div>
+                  ))}
                 </div>
               </details>
             </div>
@@ -508,6 +1045,7 @@ function Builder({ onNavigate }) {
                   </div>
                   <button
                     type="button"
+                    onClick={openEditTitle}
                     className="rounded-full border border-slate-700 px-2 py-1 text-[10px] uppercase text-slate-400"
                   >
                     Edit
@@ -525,6 +1063,9 @@ function Builder({ onNavigate }) {
                       key={section.id}
                       section={section}
                       onToggleItem={toggleItem}
+                      onAddItem={openAddItem}
+                      onEditSection={openEditSection}
+                      onEditItem={openEditItem}
                     />
                   ))}
                 </SortableContext>
@@ -533,11 +1074,355 @@ function Builder({ onNavigate }) {
           </section>
         </div>
       </div>
+
+      {modalState.open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4"
+          onClick={closeModal}
+        >
+          <div
+            className="w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-900 p-6 text-slate-100 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">
+                {modalState.mode === 'add' ? 'Add' : 'Edit'}{' '}
+                {modalState.type === 'title'
+                  ? 'Title'
+                  : modalState.type === 'section'
+                    ? 'Section'
+                    : 'Item'}
+              </h3>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-full border border-slate-700 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300"
+              >
+                Close
+              </button>
+            </div>
+            <form
+              className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-2 select-text"
+              onSubmit={handleModalSubmit}
+            >
+              {modalState.type === 'title' ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="text-sm text-slate-300">
+                    Name (bold)
+                    <input
+                      type="text"
+                      value={modalForm.name}
+                      onChange={(event) =>
+                        setModalForm((prev) => ({
+                          ...prev,
+                          name: event.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                    />
+                  </label>
+                  <label className="text-sm text-slate-300">
+                    Subtitle (italic)
+                    <input
+                      type="text"
+                      value={modalForm.subtitle}
+                      onChange={(event) =>
+                        setModalForm((prev) => ({
+                          ...prev,
+                          subtitle: event.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                    />
+                  </label>
+                  <label className="text-sm text-slate-300 md:col-span-2">
+                    Contact info (use | separators)
+                    <input
+                      type="text"
+                      value={modalForm.contact}
+                      onChange={(event) =>
+                        setModalForm((prev) => ({
+                          ...prev,
+                          contact: event.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                    />
+                  </label>
+                </div>
+              ) : modalState.type === 'section' ? (
+                <label className="text-sm text-slate-300">
+                  Section title
+                  <input
+                    type="text"
+                    value={modalForm.title}
+                    onChange={(event) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        title: event.target.value,
+                      }))
+                    }
+                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                  />
+                </label>
+              ) : (
+                <>
+                  {modalState.itemType === 'education' && (
+                    <>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <label className="text-sm text-slate-300">
+                          Degree / Faculty (bold)
+                          <input
+                            type="text"
+                            value={modalForm.degree}
+                            onChange={(event) =>
+                              setModalForm((prev) => ({
+                                ...prev,
+                                degree: event.target.value,
+                              }))
+                            }
+                            className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                          />
+                        </label>
+                        <label className="text-sm text-slate-300">
+                          University / School (bold)
+                          <input
+                            type="text"
+                            value={modalForm.school}
+                            onChange={(event) =>
+                              setModalForm((prev) => ({
+                                ...prev,
+                                school: event.target.value,
+                              }))
+                            }
+                            className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                          />
+                        </label>
+                        <label className="text-sm text-slate-300">
+                          Location
+                          <input
+                            type="text"
+                            value={modalForm.location}
+                            onChange={(event) =>
+                              setModalForm((prev) => ({
+                                ...prev,
+                                location: event.target.value,
+                              }))
+                            }
+                            className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                          />
+                        </label>
+                        <label className="text-sm text-slate-300">
+                          Program / Field (italic)
+                          <input
+                            type="text"
+                            value={modalForm.field}
+                            onChange={(event) =>
+                              setModalForm((prev) => ({
+                                ...prev,
+                                field: event.target.value,
+                              }))
+                            }
+                            className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                          />
+                        </label>
+                        <label className="text-sm text-slate-300">
+                          Dates
+                          <input
+                            type="text"
+                            value={modalForm.dates}
+                            onChange={(event) =>
+                              setModalForm((prev) => ({
+                                ...prev,
+                                dates: event.target.value,
+                              }))
+                            }
+                            className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                          />
+                        </label>
+                      </div>
+                      <label className="text-sm text-slate-300">
+                        Bullet points (one per line)
+                        <textarea
+                          rows={3}
+                          value={modalForm.bullets}
+                          onChange={(event) =>
+                            setModalForm((prev) => ({
+                              ...prev,
+                              bullets: event.target.value,
+                            }))
+                          }
+                          className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                        />
+                      </label>
+                    </>
+                  )}
+                  {modalState.itemType === 'custom' && (
+                    <>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <label className="text-sm text-slate-300">
+                          Item name (bold)
+                          <input
+                            type="text"
+                            value={modalForm.itemName}
+                            onChange={(event) =>
+                              setModalForm((prev) => ({
+                                ...prev,
+                                itemName: event.target.value,
+                              }))
+                            }
+                            className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                          />
+                        </label>
+                        <label className="text-sm text-slate-300">
+                          Location
+                          <input
+                            type="text"
+                            value={modalForm.location}
+                            onChange={(event) =>
+                              setModalForm((prev) => ({
+                                ...prev,
+                                location: event.target.value,
+                              }))
+                            }
+                            className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                          />
+                        </label>
+                        <label className="text-sm text-slate-300">
+                          Subtitle (italic)
+                          <input
+                            type="text"
+                            value={modalForm.subtitle}
+                            onChange={(event) =>
+                              setModalForm((prev) => ({
+                                ...prev,
+                                subtitle: event.target.value,
+                              }))
+                            }
+                            className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                          />
+                        </label>
+                        <label className="text-sm text-slate-300">
+                          Dates
+                          <input
+                            type="text"
+                            value={modalForm.dates}
+                            onChange={(event) =>
+                              setModalForm((prev) => ({
+                                ...prev,
+                                dates: event.target.value,
+                              }))
+                            }
+                            className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                          />
+                        </label>
+                      </div>
+                      <label className="text-sm text-slate-300">
+                        Details (one per line)
+                        <textarea
+                          rows={3}
+                          value={modalForm.details}
+                          onChange={(event) =>
+                            setModalForm((prev) => ({
+                              ...prev,
+                              details: event.target.value,
+                            }))
+                          }
+                          className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                        />
+                      </label>
+                    </>
+                  )}
+                  {modalState.itemType === 'language' && (
+                    <label className="text-sm text-slate-300">
+                      Languages (one per line)
+                      <textarea
+                        rows={4}
+                        value={modalForm.languages}
+                        onChange={(event) =>
+                          setModalForm((prev) => ({
+                            ...prev,
+                            languages: event.target.value,
+                          }))
+                        }
+                        className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                      />
+                    </label>
+                  )}
+                  <label className="text-sm text-slate-300">
+                    Section
+                    <select
+                      value={modalForm.sectionId}
+                      onChange={(event) => {
+                        const nextSectionId = event.target.value
+                        setModalForm((prev) => ({
+                          ...prev,
+                          sectionId: nextSectionId,
+                        }))
+                        const nextTitle =
+                          modalState.target === 'library'
+                            ? nextSectionId
+                            : resumeSections.find(
+                                (section) => section.id === nextSectionId,
+                              )?.title
+                        if (nextTitle) {
+                          setModalState((prev) => ({
+                            ...prev,
+                            itemType: getSectionKind(nextTitle),
+                          }))
+                        }
+                      }}
+                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                    >
+                      <option value="">Select section</option>
+                      {(modalState.target === 'library'
+                        ? librarySections
+                        : resumeSections.map((section) => section.id)
+                      ).map((sectionKey) => {
+                        const section = resumeSections.find(
+                          (entry) => entry.id === sectionKey,
+                        )
+                        const label = section ? section.title : sectionKey
+                        return (
+                          <option key={sectionKey} value={sectionKey}>
+                            {label}
+                          </option>
+                        )
+                      })}
+                    </select>
+                  </label>
+                </>
+              )}
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="rounded-full border border-slate-700 px-4 py-2 text-xs uppercase tracking-[0.2em] text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-full bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 transition hover:bg-slate-900 hover:text-white"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function SortableSectionCard({ section, onToggleItem }) {
+function SortableSectionCard({
+  section,
+  onToggleItem,
+  onAddItem,
+  onEditSection,
+  onEditItem,
+}) {
   const {
     attributes,
     listeners,
@@ -578,6 +1463,7 @@ function SortableSectionCard({ section, onToggleItem }) {
         </div>
         <button
           type="button"
+          onClick={() => onAddItem(section.id)}
           className="rounded-full border border-slate-700 px-2 py-1 text-[10px] uppercase text-slate-400"
         >
           Add
@@ -594,6 +1480,7 @@ function SortableSectionCard({ section, onToggleItem }) {
               item={item}
               sectionId={section.id}
               onToggleItem={onToggleItem}
+              onEditItem={onEditItem}
             />
           ))}
         </div>
@@ -602,7 +1489,7 @@ function SortableSectionCard({ section, onToggleItem }) {
   )
 }
 
-function SortableItemRow({ item, sectionId, onToggleItem }) {
+function SortableItemRow({ item, sectionId, onToggleItem, onEditItem }) {
   const {
     attributes,
     listeners,
@@ -650,7 +1537,9 @@ function SortableItemRow({ item, sectionId, onToggleItem }) {
         </label>
       </div>
       <div className="flex items-center gap-2 text-[10px] uppercase text-slate-400">
-        <button type="button">Edit</button>
+        <button type="button" onClick={() => onEditItem(sectionId, item.id)}>
+          Edit
+        </button>
         <button type="button">X</button>
       </div>
     </div>
