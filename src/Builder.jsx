@@ -108,7 +108,7 @@ export async function buildPdf(resume = defaultResume) {
   registerCalibriFonts(doc)
 
   const pageWidth = doc.internal.pageSize.getWidth()
-  const margin = 54
+  const margin = 40
   let y = 50
 
   const centerX = pageWidth / 2
