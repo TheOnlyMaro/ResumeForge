@@ -1,4 +1,13 @@
 import jsPDF from 'jspdf'
+import { useState } from 'react'
+import { DndContext } from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 const defaultResume = {
   name: 'Jordan Taylor',
@@ -219,6 +228,122 @@ export async function buildPdf(resume = defaultResume) {
 }
 
 function Builder({ onNavigate }) {
+  const [resumeSections, setResumeSections] = useState([
+    {
+      id: 'education',
+      title: 'Education',
+      items: [
+        { id: 'edu-1', label: 'B.Sc. Visual Communication', enabled: true },
+        { id: 'edu-2', label: 'Honors thesis', enabled: true },
+      ],
+    },
+    {
+      id: 'experience',
+      title: 'Experience',
+      items: [
+        { id: 'exp-1', label: 'Lead Product Designer', enabled: true },
+        { id: 'exp-2', label: 'Product Designer', enabled: true },
+      ],
+    },
+  ])
+  const toggleItem = (sectionId, itemId) => {
+    setResumeSections((sections) =>
+      sections.map((section) => {
+        if (section.id !== sectionId) {
+          return section
+        }
+        return {
+          ...section,
+          items: section.items.map((item) =>
+            item.id === itemId
+              ? { ...item, enabled: !item.enabled }
+              : item,
+          ),
+        }
+      }),
+    )
+  }
+
+  const buildResumeFromState = () => {
+    const mapItemsToDetails = (items) =>
+      items
+        .filter((item) => item.enabled)
+        .map((item) => item.label)
+
+    const educationSection = resumeSections.find(
+      (section) => section.id === 'education',
+    )
+    const experienceSection = resumeSections.find(
+      (section) => section.id === 'experience',
+    )
+
+    return {
+      ...defaultResume,
+      education: [
+        {
+          ...defaultResume.education[0],
+          bullets: mapItemsToDetails(educationSection?.items ?? []),
+        },
+      ],
+      sections: [
+        {
+          title: 'EXPERIENCE',
+          items: [
+            {
+              ...defaultResume.sections[0].items[0],
+              details: mapItemsToDetails(experienceSection?.items ?? []),
+            },
+          ],
+        },
+      ],
+    }
+  }
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) {
+      return
+    }
+
+    const activeType = active.data.current?.type
+    const overType = over.data.current?.type
+
+    if (activeType === 'section' && overType === 'section') {
+      setResumeSections((sections) => {
+        const oldIndex = sections.findIndex((section) => section.id === active.id)
+        const newIndex = sections.findIndex((section) => section.id === over.id)
+        return arrayMove(sections, oldIndex, newIndex)
+      })
+      return
+    }
+
+    if (activeType === 'item' && overType === 'item') {
+      const activeSectionId = active.data.current?.sectionId
+      const overSectionId = over.data.current?.sectionId
+      if (activeSectionId !== overSectionId) {
+        return
+      }
+
+      setResumeSections((sections) =>
+        sections.map((section) => {
+          if (section.id !== activeSectionId) {
+            return section
+          }
+
+          const oldIndex = section.items.findIndex(
+            (item) => item.id === active.id,
+          )
+          const newIndex = section.items.findIndex(
+            (item) => item.id === over.id,
+          )
+          return {
+            ...section,
+            items: arrayMove(section.items, oldIndex, newIndex),
+          }
+        }),
+      )
+    }
+  }
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto flex w-full max-w-none flex-col gap-8 px-2 py-6">
@@ -250,7 +375,7 @@ function Builder({ onNavigate }) {
             <button
               type="button"
               onClick={async () => {
-                await buildPdf()
+                await buildPdf(buildResumeFromState())
               }}
               className="rounded-full bg-white px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 transition hover:bg-slate-900 hover:text-white"
             >
@@ -338,63 +463,143 @@ function Builder({ onNavigate }) {
                 </div>
               </div>
 
-              {[
-                {
-                  title: 'Education',
-                  items: ['B.Sc. Visual Communication', 'Honors thesis'],
-                },
-                {
-                  title: 'Experience',
-                  items: ['Lead Product Designer', 'Product Designer'],
-                },
-              ].map((section) => (
-                <div
-                  key={section.title}
-                  className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3 transition hover:border-slate-700"
+              <DndContext onDragEnd={handleDragEnd}>
+                <SortableContext
+                  items={resumeSections.map((section) => section.id)}
+                  strategy={verticalListSortingStrategy}
                 >
-                  <div className="mb-2 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-slate-500">::</span>
-                      <span className="text-sm font-semibold text-slate-100">
-                        {section.title}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className="rounded-full border border-slate-700 px-2 py-1 text-[10px] uppercase text-slate-400"
-                    >
-                      Add
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {section.items.map((item) => (
-                      <div
-                        key={item}
-                        className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2 transition hover:border-slate-700 hover:bg-slate-900/80"
-                      >
-                        <label className="flex cursor-pointer items-center gap-3 text-xs text-slate-200">
-                          <span className="relative inline-flex h-4 w-4 items-center justify-center">
-                            <input
-                              type="checkbox"
-                              defaultChecked
-                              className="peer absolute h-0 w-0 opacity-0"
-                            />
-                            <span className="h-4 w-4 rounded border border-slate-600 bg-slate-950 transition peer-checked:border-emerald-400 peer-checked:bg-emerald-400" />
-                          </span>
-                          {item}
-                        </label>
-                        <div className="flex items-center gap-2 text-[10px] uppercase text-slate-400">
-                          <button type="button">Edit</button>
-                          <button type="button">X</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                  {resumeSections.map((section) => (
+                    <SortableSectionCard
+                      key={section.id}
+                      section={section}
+                      onToggleItem={toggleItem}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             </div>
           </section>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function SortableSectionCard({ section, onToggleItem }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: section.id, data: { type: 'section' } })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3 transition hover:border-slate-700"
+    >
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            className="cursor-grab text-slate-500"
+            aria-label="Drag section"
+          >
+            ::
+          </button>
+          <span className="text-sm font-semibold text-slate-100">
+            {section.title}
+          </span>
+        </div>
+        <button
+          type="button"
+          className="rounded-full border border-slate-700 px-2 py-1 text-[10px] uppercase text-slate-400"
+        >
+          Add
+        </button>
+      </div>
+      <SortableContext
+        items={section.items.map((item) => item.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="flex flex-col gap-2">
+          {section.items.map((item) => (
+            <SortableItemRow
+              key={item.id}
+              item={item}
+              sectionId={section.id}
+              onToggleItem={onToggleItem}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </div>
+  )
+}
+
+function SortableItemRow({ item, sectionId, onToggleItem }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id, data: { type: 'item', sectionId } })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2 transition hover:border-slate-700 hover:bg-slate-900/80"
+    >
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          {...attributes}
+          {...listeners}
+          className="cursor-grab text-slate-500"
+          aria-label="Drag item"
+        >
+          ::
+        </button>
+        <label className="flex cursor-pointer items-center gap-3 text-xs text-slate-200">
+          <span className="relative inline-flex h-4 w-4 items-center justify-center">
+            <input
+              type="checkbox"
+              checked={item.enabled}
+              onChange={() => onToggleItem(sectionId, item.id)}
+              className="peer absolute h-0 w-0 opacity-0"
+            />
+            <span className="h-4 w-4 rounded border border-slate-600 bg-slate-950 transition peer-checked:border-emerald-400 peer-checked:bg-emerald-400" />
+          </span>
+          {item.label}
+        </label>
+      </div>
+      <div className="flex items-center gap-2 text-[10px] uppercase text-slate-400">
+        <button type="button">Edit</button>
+        <button type="button">X</button>
       </div>
     </div>
   )
