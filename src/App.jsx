@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import Builder from './Builder.jsx'
-import { buildResumePdf } from './pdf/buildResumePdf'
 
 function App() {
   const [isDark, setIsDark] = useState(true)
@@ -102,9 +101,8 @@ function App() {
               <a
                 className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-900 hover:text-white"
                 href="/builder"
-                onClick={async (event) => {
+                onClick={(event) => {
                   event.preventDefault()
-                  await buildResumePdf()
                   navigate('/builder')
                 }}
               >

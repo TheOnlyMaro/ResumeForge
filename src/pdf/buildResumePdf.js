@@ -109,8 +109,11 @@ export async function buildResumePdf(resume = defaultResume) {
     if (!trimmed) {
       return isEmail(fallbackLabel) ? `mailto:${fallbackLabel}` : ''
     }
-    if (/^[a-z][a-z0-9+.-]*:/.test(trimmed)) {
-      return trimmed
+    if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) {
+      if (/^(https?|mailto):/i.test(trimmed)) {
+        return trimmed
+      }
+      return ''
     }
     if (isEmail(trimmed)) {
       return `mailto:${trimmed}`
