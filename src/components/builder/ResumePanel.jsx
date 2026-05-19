@@ -7,6 +7,9 @@ function ResumePanel({
   selectedResumeSectionId,
   onSelectSection,
   onToggleItem,
+  onRemoveItem,
+  onRemoveSection,
+  onAddSection,
   onAddItem,
   onEditSection,
   onEditItem,
@@ -65,7 +68,13 @@ function ResumePanel({
             {selectedTitle}
           </p>
         </div>
-        <span className="text-xs text-slate-500">Toggle or remove</span>
+        <button
+          type="button"
+          onClick={() => onAddSection?.('resume')}
+          className="rounded-full border border-slate-700 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-amber-300 hover:bg-amber-300/10 hover:text-amber-100"
+        >
+          Add Section
+        </button>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -81,7 +90,7 @@ function ResumePanel({
             <button
               type="button"
               onClick={onEditTitle}
-              className="rounded-full border border-slate-700 px-2 py-1 text-[10px] uppercase text-slate-400"
+              className="rounded-full border border-slate-700 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-amber-300 hover:bg-amber-300/10 hover:text-amber-100"
             >
               Edit
             </button>
@@ -105,6 +114,8 @@ function ResumePanel({
                 key={section.id}
                 section={section}
                 onToggleItem={onToggleItem}
+                onRemoveItem={onRemoveItem}
+                onRemoveSection={onRemoveSection}
                 onAddItem={onAddItem}
                 onEditSection={onEditSection}
                 onEditItem={onEditItem}

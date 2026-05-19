@@ -297,6 +297,25 @@ function Builder({ onNavigate }) {
     )
   }
 
+  const removeItem = (sectionId, itemId) => {
+    setResumeSections((sections) =>
+      sections.map((section) =>
+        section.id === sectionId
+          ? {
+              ...section,
+              items: section.items.filter((item) => item.id !== itemId),
+            }
+          : section,
+      ),
+    )
+  }
+
+  const removeSection = (sectionId) => {
+    setResumeSections((sections) =>
+      sections.filter((section) => section.id !== sectionId),
+    )
+  }
+
   const openAddSection = (target = 'resume') => {
     setModalForm({
       title: '',
@@ -1002,6 +1021,9 @@ function Builder({ onNavigate }) {
               selectedResumeSectionId={selectedResumeSectionId}
               onSelectSection={setSelectedResumeSectionId}
               onToggleItem={toggleItem}
+              onRemoveItem={removeItem}
+              onRemoveSection={removeSection}
+              onAddSection={openAddSection}
               onAddItem={openAddItem}
               onEditSection={openEditSection}
               onEditItem={openEditItem}

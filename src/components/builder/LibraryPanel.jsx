@@ -30,7 +30,7 @@ function LibraryPanel({
                 event.stopPropagation()
                 onAddSection('library')
               }}
-              className="rounded-md border border-slate-700 px-2 py-0.5 text-[10px] uppercase text-slate-400"
+              className="rounded-full border border-slate-700 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-amber-300 hover:bg-amber-300/10 hover:text-amber-100"
             >
               Add
             </button>
@@ -61,7 +61,7 @@ function LibraryPanel({
                 event.stopPropagation()
                 onAddItem('', 'library')
               }}
-              className="rounded-md border border-slate-700 px-2 py-0.5 text-[10px] uppercase text-slate-400"
+              className="rounded-full border border-slate-700 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-amber-300 hover:bg-amber-300/10 hover:text-amber-100"
             >
               Add
             </button>

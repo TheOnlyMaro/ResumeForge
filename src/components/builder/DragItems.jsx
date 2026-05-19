@@ -9,6 +9,8 @@ import { CSS } from '@dnd-kit/utilities'
 export function SortableSectionCard({
   section,
   onToggleItem,
+  onRemoveItem,
+  onRemoveSection,
   onAddItem,
   onEditSection,
   onEditItem,
@@ -58,13 +60,22 @@ export function SortableSectionCard({
             {section.title}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={() => onAddItem(section.id)}
-          className="rounded-full border border-slate-700 px-2 py-1 text-[10px] uppercase text-slate-400"
-        >
-          Add
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onAddItem(section.id)}
+            className="rounded-full border border-slate-700 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-amber-300 hover:bg-amber-300/10 hover:text-amber-100"
+          >
+            Add
+          </button>
+          <button
+            type="button"
+            onClick={() => onRemoveSection?.(section.id)}
+            className="rounded-full border border-slate-700 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-rose-300 hover:bg-rose-500/10 hover:text-rose-100"
+          >
+            X
+          </button>
+        </div>
       </div>
       <SortableContext
         items={section.items.map((item) => item.id)}
@@ -77,6 +88,7 @@ export function SortableSectionCard({
               item={item}
               sectionId={section.id}
               onToggleItem={onToggleItem}
+              onRemoveItem={onRemoveItem}
               onEditItem={onEditItem}
             />
           ))}
@@ -86,7 +98,13 @@ export function SortableSectionCard({
   )
 }
 
-export function SortableItemRow({ item, sectionId, onToggleItem, onEditItem }) {
+export function SortableItemRow({
+  item,
+  sectionId,
+  onToggleItem,
+  onRemoveItem,
+  onEditItem,
+}) {
   const {
     attributes,
     listeners,
@@ -134,10 +152,20 @@ export function SortableItemRow({ item, sectionId, onToggleItem, onEditItem }) {
         </label>
       </div>
       <div className="flex items-center gap-2 text-[10px] uppercase text-slate-400">
-        <button type="button" onClick={() => onEditItem(sectionId, item.id)}>
+        <button
+          type="button"
+          onClick={() => onEditItem(sectionId, item.id)}
+          className="rounded-full border border-slate-700 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-amber-300 hover:bg-amber-300/10 hover:text-amber-100"
+        >
           Edit
         </button>
-        <button type="button">X</button>
+        <button
+          type="button"
+          onClick={() => onRemoveItem(sectionId, item.id)}
+          className="rounded-full border border-slate-700 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-rose-300 hover:bg-rose-500/10 hover:text-rose-100"
+        >
+          X
+        </button>
       </div>
     </div>
   )
