@@ -231,10 +231,20 @@ function Builder({ onNavigate }) {
               <h1 className="text-3xl font-semibold text-white">
                 Resume Builder
               </h1>
+              <div className="relative">
+                <select
+                  className="appearance-none rounded-full border border-slate-700 bg-slate-950/50 px-3 py-1 pr-8 text-xs uppercase tracking-[0.2em] text-slate-300 transition hover:bg-white hover:text-slate-900"
+                  defaultValue="harvard-bulleted"
+                >
+                  <option value="harvard-bulleted">
+                    Harvard template (bulleted)
+                  </option>
+                </select>
+                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
+                  ▾
+                </span>
+              </div>
             </div>
-            <p className="mt-2 text-sm text-slate-300">
-              Harvard template (bulleted) - builder UI scaffold.
-            </p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -269,7 +279,7 @@ function Builder({ onNavigate }) {
                 (item) => (
                   <div
                     key={item}
-                    className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/40 px-4 py-3"
+                    className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/40 px-4 py-3 transition hover:border-slate-700 hover:bg-slate-950/60"
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-slate-500">::</span>
@@ -287,9 +297,14 @@ function Builder({ onNavigate }) {
               <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-300">
                 Live PDF
               </h2>
-              <span className="text-xs text-slate-500">Preview</span>
+              <button
+                type="button"
+                className="rounded-full border border-slate-700 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-slate-300 transition hover:border-slate-500 hover:bg-slate-900/70"
+              >
+                Preview
+              </button>
             </div>
-            <div className="flex h-[520px] items-center justify-center rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 text-sm text-slate-500">
+            <div className="flex h-[546px] items-center justify-center rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 text-sm text-slate-500">
               PDF preview will render here
             </div>
           </section>
@@ -335,7 +350,7 @@ function Builder({ onNavigate }) {
               ].map((section) => (
                 <div
                   key={section.title}
-                  className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3"
+                  className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3 transition hover:border-slate-700"
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -355,12 +370,19 @@ function Builder({ onNavigate }) {
                     {section.items.map((item) => (
                       <div
                         key={item}
-                        className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2"
+                        className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2 transition hover:border-slate-700 hover:bg-slate-900/80"
                       >
-                        <div className="flex items-center gap-3">
-                          <input type="checkbox" defaultChecked />
-                          <span className="text-xs text-slate-200">{item}</span>
-                        </div>
+                        <label className="flex cursor-pointer items-center gap-3 text-xs text-slate-200">
+                          <span className="relative inline-flex h-4 w-4 items-center justify-center">
+                            <input
+                              type="checkbox"
+                              defaultChecked
+                              className="peer absolute h-0 w-0 opacity-0"
+                            />
+                            <span className="h-4 w-4 rounded border border-slate-600 bg-slate-950 transition peer-checked:border-emerald-400 peer-checked:bg-emerald-400" />
+                          </span>
+                          {item}
+                        </label>
                         <div className="flex items-center gap-2 text-[10px] uppercase text-slate-400">
                           <button type="button">Edit</button>
                           <button type="button">X</button>
