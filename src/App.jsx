@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import Builder, { buildPdf } from './Builder.jsx'
+import Builder from './Builder.jsx'
+import { buildResumePdf } from './pdf/buildResumePdf'
 
 function App() {
   const [isDark, setIsDark] = useState(true)
@@ -103,7 +104,7 @@ function App() {
                 href="/builder"
                 onClick={async (event) => {
                   event.preventDefault()
-                  await buildPdf()
+                  await buildResumePdf()
                   navigate('/builder')
                 }}
               >

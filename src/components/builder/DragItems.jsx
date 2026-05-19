@@ -1,0 +1,219 @@
+import { useDraggable } from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+
+export function SortableSectionCard({
+  section,
+  onToggleItem,
+  onAddItem,
+  onEditSection,
+  onEditItem,
+  onSelectSection,
+  selected,
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: section.id, data: { type: 'section' } })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`rounded-2xl border bg-slate-950/40 p-3 transition hover:border-slate-700 ${
+        selected
+          ? 'border-amber-400/60 shadow-[0_0_0_1px_rgba(251,191,36,0.4)]'
+          : 'border-slate-800'
+      }`}
+      onClick={() => onSelectSection?.(section.id)}
+    >
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            className="cursor-grab text-slate-500"
+            aria-label="Drag section"
+          >
+            ::
+          </button>
+          <span className="text-sm font-semibold text-slate-100">
+            {section.title}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => onAddItem(section.id)}
+          className="rounded-full border border-slate-700 px-2 py-1 text-[10px] uppercase text-slate-400"
+        >
+          Add
+        </button>
+      </div>
+      <SortableContext
+        items={section.items.map((item) => item.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="flex flex-col gap-2">
+          {section.items.map((item) => (
+            <SortableItemRow
+              key={item.id}
+              item={item}
+              sectionId={section.id}
+              onToggleItem={onToggleItem}
+              onEditItem={onEditItem}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </div>
+  )
+}
+
+export function SortableItemRow({ item, sectionId, onToggleItem, onEditItem }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id, data: { type: 'item', sectionId } })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2 transition hover:border-slate-700 hover:bg-slate-900/80"
+    >
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          {...attributes}
+          {...listeners}
+          className="cursor-grab text-slate-500"
+          aria-label="Drag item"
+        >
+          ::
+        </button>
+        <label className="flex cursor-pointer items-center gap-3 text-xs text-slate-200">
+          <span className="relative inline-flex h-4 w-4 items-center justify-center">
+            <input
+              type="checkbox"
+              checked={item.enabled}
+              onChange={() => onToggleItem(sectionId, item.id)}
+              className="peer absolute h-0 w-0 opacity-0"
+            />
+            <span className="h-4 w-4 rounded border border-slate-600 bg-slate-950 transition peer-checked:border-emerald-400 peer-checked:bg-emerald-400" />
+          </span>
+          {item.label}
+        </label>
+      </div>
+      <div className="flex items-center gap-2 text-[10px] uppercase text-slate-400">
+        <button type="button" onClick={() => onEditItem(sectionId, item.id)}>
+          Edit
+        </button>
+        <button type="button">X</button>
+      </div>
+    </div>
+  )
+}
+
+export function LibraryDraggableItem({ item }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useDraggable({ id: `library-${item.id}`, data: { type: 'library-item', item } })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/40 px-4 py-3 transition hover:border-slate-700 hover:bg-slate-950/60"
+    >
+      <div className="flex items-center gap-3">
+        <span className="text-slate-500">::</span>
+        <span className="text-sm text-slate-200">{item.label}</span>
+      </div>
+      <span className="text-xs text-slate-500">Drag</span>
+    </div>
+  )
+}
+
+export function LibraryDraggableSection({ title, items, active, onSelect }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useDraggable({
+    id: `library-section-${title}`,
+    data: { type: 'library-section', title, items },
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center justify-between rounded-2xl border px-4 py-3 transition hover:border-slate-700 hover:bg-slate-950/60 ${
+        active
+          ? 'border-amber-400/60 bg-slate-900/50 shadow-[0_0_0_1px_rgba(251,191,36,0.4)]'
+          : 'border-slate-800 bg-slate-950/40'
+      }`}
+      onClick={onSelect}
+    >
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          className="cursor-grab text-slate-500"
+          {...attributes}
+          {...listeners}
+          aria-label="Drag library section"
+          onClick={(event) => event.stopPropagation()}
+        >
+          ::
+        </button>
+        <span className="text-sm text-slate-200">{title}</span>
+      </div>
+      <span className="text-xs text-slate-500">Drag</span>
+    </div>
+  )
+}
