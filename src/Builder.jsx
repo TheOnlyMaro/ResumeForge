@@ -12,11 +12,11 @@ import { CSS } from '@dnd-kit/utilities'
 const defaultResume = {
   name: 'Jordan Taylor',
   subtitle: 'Product Designer',
-  contact: [
-    'jordan.taylor@email.com',
-    'linkedin.com/in/jordantaylor',
-    '555-0134',
-    'Austin, TX',
+  contacts: [
+    { label: 'jordan.taylor@email.com', link: '' },
+    { label: 'linkedin.com/in/jordantaylor', link: '' },
+    { label: '555-0134', link: '' },
+    { label: 'Austin, TX', link: '' },
   ],
   education: [
     {
@@ -138,10 +138,67 @@ export async function buildPdf(resume = defaultResume) {
   doc.text(resume.subtitle, centerX, y, { align: 'center' })
 
   y += 14
-  doc.setFont('Calibri', 'bold')
-  doc.setFontSize(11)
-  const contactLine = resume.contact.join(' | ')
-  doc.text(contactLine, centerX, y, { align: 'center' })
+  doc.setFont('Calibri', 'normal')
+  doc.setFontSize(10)
+  const rawContacts = resume.contacts ?? resume.contact ?? []
+  const contactEntries = rawContacts
+    .map((entry) => {
+      if (typeof entry === 'string') {
+        return { label: entry.trim(), link: '' }
+      }
+      return {
+        label: (entry.label || '').trim(),
+        link: (entry.link || '').trim(),
+      }
+    })
+    .filter((entry) => entry.label)
+
+  const isEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+  const normalizeLink = (value, label) => {
+    const trimmed = (value || '').trim()
+    const fallbackLabel = (label || '').trim()
+    if (!trimmed) {
+      return isEmail(fallbackLabel) ? `mailto:${fallbackLabel}` : ''
+    }
+    if (/^[a-z][a-z0-9+.-]*:/.test(trimmed)) {
+      return trimmed
+    }
+    if (isEmail(trimmed)) {
+      return `mailto:${trimmed}`
+    }
+    return `https://${trimmed}`
+  }
+
+  const separator = ' | '
+  const separatorWidth = doc.getTextWidth(separator)
+  const entryWidths = contactEntries.map((entry) =>
+    doc.getTextWidth(entry.label),
+  )
+  const totalWidth =
+    entryWidths.reduce((sum, width) => sum + width, 0) +
+    separatorWidth * Math.max(0, contactEntries.length - 1)
+  let x = centerX - totalWidth / 2
+
+  contactEntries.forEach((entry, index) => {
+    const link = normalizeLink(entry.link, entry.label)
+    if (link) {
+      doc.setTextColor(30, 99, 187)
+      doc.textWithLink(entry.label, x, y, { url: link })
+      const width = entryWidths[index]
+      doc.setDrawColor(30, 99, 187)
+      doc.setLineWidth(0.6)
+      doc.line(x, y + 2, x + width, y + 2)
+      doc.setTextColor(0, 0, 0)
+      doc.setDrawColor(0, 0, 0)
+    } else {
+      doc.text(entry.label, x, y)
+    }
+    x += entryWidths[index]
+    if (index < contactEntries.length - 1) {
+      doc.text(separator, x, y)
+      x += separatorWidth
+    }
+  })
 
   y += 16
 
@@ -271,7 +328,7 @@ function Builder({ onNavigate }) {
   const [titleData, setTitleData] = useState({
     name: defaultResume.name,
     subtitle: defaultResume.subtitle,
-    contact: defaultResume.contact.join(' | '),
+    contacts: defaultResume.contacts.map((entry) => ({ ...entry })),
   })
   const [librarySections, setLibrarySections] = useState([
     'Experience',
@@ -359,13 +416,22 @@ function Builder({ onNavigate }) {
     sectionId: null,
     itemId: null,
   })
+  const [dismissNotice, setDismissNotice] = useState({
+    visible: false,
+    message: '',
+  })
   const [modalForm, setModalForm] = useState({
     title: '',
     itemName: '',
     sectionId: '',
     name: '',
     subtitle: '',
-    contact: '',
+    contacts: [
+      { label: '', link: '' },
+      { label: '', link: '' },
+      { label: '', link: '' },
+      { label: '', link: '' },
+    ],
     degree: '',
     school: '',
     location: '',
@@ -422,7 +488,12 @@ function Builder({ onNavigate }) {
       sectionId: '',
       name: '',
       subtitle: '',
-      contact: '',
+      contacts: [
+        { label: '', link: '' },
+        { label: '', link: '' },
+        { label: '', link: '' },
+        { label: '', link: '' },
+      ],
       degree: '',
       school: '',
       location: '',
@@ -455,7 +526,12 @@ function Builder({ onNavigate }) {
       sectionId,
       name: '',
       subtitle: '',
-      contact: '',
+      contacts: [
+        { label: '', link: '' },
+        { label: '', link: '' },
+        { label: '', link: '' },
+        { label: '', link: '' },
+      ],
       degree: '',
       school: '',
       location: '',
@@ -485,7 +561,12 @@ function Builder({ onNavigate }) {
       sectionId: sectionId ?? '',
       name: '',
       subtitle: item?.subtitle ?? '',
-      contact: '',
+      contacts: [
+        { label: '', link: '' },
+        { label: '', link: '' },
+        { label: '', link: '' },
+        { label: '', link: '' },
+      ],
       degree: item?.degree ?? '',
       school: item?.school ?? '',
       location: item?.location ?? '',
@@ -514,7 +595,12 @@ function Builder({ onNavigate }) {
       sectionId: sectionId ?? '',
       name: '',
       subtitle: '',
-      contact: '',
+      contacts: [
+        { label: '', link: '' },
+        { label: '', link: '' },
+        { label: '', link: '' },
+        { label: '', link: '' },
+      ],
       degree: '',
       school: '',
       location: '',
@@ -540,7 +626,9 @@ function Builder({ onNavigate }) {
       ...prev,
       name: titleData.name,
       subtitle: titleData.subtitle,
-      contact: titleData.contact,
+      contacts:
+        titleData.contacts?.map((entry) => ({ ...entry })) ??
+        prev.contacts,
     }))
     setModalState({
       open: true,
@@ -565,13 +653,32 @@ function Builder({ onNavigate }) {
     })
   }
 
+  const showDismissNotice = (message) => {
+    setDismissNotice({ visible: true, message })
+    setTimeout(() => {
+      setDismissNotice((prev) =>
+        prev.message === message ? { visible: false, message: '' } : prev,
+      )
+    }, 2400)
+  }
+
+  const handleBackdropClose = () => {
+    closeModal()
+    showDismissNotice('Changes not saved')
+  }
+
   const handleModalSubmit = (event) => {
     event.preventDefault()
     if (modalState.type === 'title') {
       setTitleData({
         name: modalForm.name.trim() || titleData.name,
         subtitle: modalForm.subtitle.trim() || titleData.subtitle,
-        contact: modalForm.contact.trim() || titleData.contact,
+        contacts: modalForm.contacts
+          .map((entry) => ({
+            label: entry.label.trim(),
+            link: entry.link.trim(),
+          }))
+          .filter((entry) => entry.label || entry.link),
       })
       closeModal()
       return
@@ -818,12 +925,9 @@ function Builder({ onNavigate }) {
       ...defaultResume,
       name: titleData.name || defaultResume.name,
       subtitle: titleData.subtitle || defaultResume.subtitle,
-      contact: titleData.contact
-        ? titleData.contact
-            .split('|')
-            .map((entry) => entry.trim())
-            .filter(Boolean)
-        : defaultResume.contact,
+      contacts: titleData.contacts?.length
+        ? titleData.contacts
+        : defaultResume.contacts,
       education: educationItems,
       sections,
       languages,
@@ -1078,7 +1182,7 @@ function Builder({ onNavigate }) {
       {modalState.open && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4"
-          onClick={closeModal}
+          onClick={handleBackdropClose}
         >
           <div
             className="w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-900 p-6 text-slate-100 shadow-2xl"
@@ -1106,49 +1210,110 @@ function Builder({ onNavigate }) {
               onSubmit={handleModalSubmit}
             >
               {modalState.type === 'title' ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                  <label className="text-sm text-slate-300">
-                    Name (bold)
-                    <input
-                      type="text"
-                      value={modalForm.name}
-                      onChange={(event) =>
-                        setModalForm((prev) => ({
-                          ...prev,
-                          name: event.target.value,
-                        }))
-                      }
-                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
-                    />
-                  </label>
-                  <label className="text-sm text-slate-300">
-                    Subtitle (italic)
-                    <input
-                      type="text"
-                      value={modalForm.subtitle}
-                      onChange={(event) =>
-                        setModalForm((prev) => ({
-                          ...prev,
-                          subtitle: event.target.value,
-                        }))
-                      }
-                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
-                    />
-                  </label>
-                  <label className="text-sm text-slate-300 md:col-span-2">
-                    Contact info (use | separators)
-                    <input
-                      type="text"
-                      value={modalForm.contact}
-                      onChange={(event) =>
-                        setModalForm((prev) => ({
-                          ...prev,
-                          contact: event.target.value,
-                        }))
-                      }
-                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
-                    />
-                  </label>
+                <div className="flex flex-col gap-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="text-sm text-slate-300">
+                      Name (bold)
+                      <input
+                        type="text"
+                        value={modalForm.name}
+                        onChange={(event) =>
+                          setModalForm((prev) => ({
+                            ...prev,
+                            name: event.target.value,
+                          }))
+                        }
+                        className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                      />
+                    </label>
+                    <label className="text-sm text-slate-300">
+                      Subtitle (italic)
+                      <input
+                        type="text"
+                        value={modalForm.subtitle}
+                        onChange={(event) =>
+                          setModalForm((prev) => ({
+                            ...prev,
+                            subtitle: event.target.value,
+                          }))
+                        }
+                        className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                      />
+                    </label>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {modalForm.contacts.map((entry, index) => (
+                      <div
+                        key={`contact-${index}`}
+                        className="rounded-xl border border-slate-800 bg-slate-950/40 p-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                            Contact
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setModalForm((prev) => ({
+                                ...prev,
+                                contacts: prev.contacts.filter(
+                                  (_, itemIndex) => itemIndex !== index,
+                                ),
+                              }))
+                            }
+                            className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] uppercase text-slate-400"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={entry.label}
+                          onChange={(event) =>
+                            setModalForm((prev) => ({
+                              ...prev,
+                              contacts: prev.contacts.map((item, itemIndex) =>
+                                itemIndex === index
+                                  ? { ...item, label: event.target.value }
+                                  : item,
+                              ),
+                            }))
+                          }
+                          className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                        />
+                        <label className="mt-3 block text-xs uppercase tracking-[0.2em] text-slate-400">
+                          Link
+                          <input
+                            type="text"
+                            value={entry.link}
+                            onChange={(event) =>
+                              setModalForm((prev) => ({
+                                ...prev,
+                                contacts: prev.contacts.map((item, itemIndex) =>
+                                  itemIndex === index
+                                    ? { ...item, link: event.target.value }
+                                    : item,
+                                ),
+                              }))
+                            }
+                            className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                          />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        contacts: [...prev.contacts, { label: '', link: '' }],
+                      }))
+                    }
+                    className="rounded-full border border-slate-700 px-4 py-2 text-xs uppercase tracking-[0.2em] text-slate-300"
+                  >
+                    Add contact
+                  </button>
                 </div>
               ) : modalState.type === 'section' ? (
                 <label className="text-sm text-slate-300">
@@ -1349,48 +1514,50 @@ function Builder({ onNavigate }) {
                       />
                     </label>
                   )}
-                  <label className="text-sm text-slate-300">
-                    Section
-                    <select
-                      value={modalForm.sectionId}
-                      onChange={(event) => {
-                        const nextSectionId = event.target.value
-                        setModalForm((prev) => ({
-                          ...prev,
-                          sectionId: nextSectionId,
-                        }))
-                        const nextTitle =
-                          modalState.target === 'library'
-                            ? nextSectionId
-                            : resumeSections.find(
-                                (section) => section.id === nextSectionId,
-                              )?.title
-                        if (nextTitle) {
-                          setModalState((prev) => ({
+                  {modalState.mode === 'edit' && (
+                    <label className="text-sm text-slate-300">
+                      Section
+                      <select
+                        value={modalForm.sectionId}
+                        onChange={(event) => {
+                          const nextSectionId = event.target.value
+                          setModalForm((prev) => ({
                             ...prev,
-                            itemType: getSectionKind(nextTitle),
+                            sectionId: nextSectionId,
                           }))
-                        }
-                      }}
-                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
-                    >
-                      <option value="">Select section</option>
-                      {(modalState.target === 'library'
-                        ? librarySections
-                        : resumeSections.map((section) => section.id)
-                      ).map((sectionKey) => {
-                        const section = resumeSections.find(
-                          (entry) => entry.id === sectionKey,
-                        )
-                        const label = section ? section.title : sectionKey
-                        return (
-                          <option key={sectionKey} value={sectionKey}>
-                            {label}
-                          </option>
-                        )
-                      })}
-                    </select>
-                  </label>
+                          const nextTitle =
+                            modalState.target === 'library'
+                              ? nextSectionId
+                              : resumeSections.find(
+                                  (section) => section.id === nextSectionId,
+                                )?.title
+                          if (nextTitle) {
+                            setModalState((prev) => ({
+                              ...prev,
+                              itemType: getSectionKind(nextTitle),
+                            }))
+                          }
+                        }}
+                        className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                      >
+                        <option value="">Select section</option>
+                        {(modalState.target === 'library'
+                          ? librarySections
+                          : resumeSections.map((section) => section.id)
+                        ).map((sectionKey) => {
+                          const section = resumeSections.find(
+                            (entry) => entry.id === sectionKey,
+                          )
+                          const label = section ? section.title : sectionKey
+                          return (
+                            <option key={sectionKey} value={sectionKey}>
+                              {label}
+                            </option>
+                          )
+                        })}
+                      </select>
+                    </label>
+                  )}
                 </>
               )}
               <div className="flex justify-end gap-3">
@@ -1410,6 +1577,23 @@ function Builder({ onNavigate }) {
               </div>
             </form>
           </div>
+        </div>
+      )}
+      {dismissNotice.visible && (
+        <div className="fixed bottom-6 left-1/2 z-50 w-[min(92vw,420px)] -translate-x-1/2 rounded-2xl border border-amber-400/40 bg-gradient-to-br from-amber-500/20 via-slate-950/95 to-slate-950/90 px-5 py-3 text-sm text-slate-100 shadow-[0_20px_60px_rgba(15,23,42,0.6)]">
+          <div className="flex items-center justify-between">
+            <span className="uppercase tracking-[0.2em] text-[10px] text-amber-200">
+              Notice
+            </span>
+            <button
+              type="button"
+              onClick={() => setDismissNotice({ visible: false, message: '' })}
+              className="rounded-full border border-amber-200/40 px-2 py-0.5 text-[10px] uppercase text-amber-100"
+            >
+              Close
+            </button>
+          </div>
+          <p className="mt-2 text-sm text-amber-50">{dismissNotice.message}</p>
         </div>
       )}
     </div>
