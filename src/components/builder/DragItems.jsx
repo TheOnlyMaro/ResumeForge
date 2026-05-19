@@ -28,7 +28,7 @@ export function SortableSectionCard({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.6 : 1,
+    opacity: isDragging ? 0 : 1,
   }
 
   return (
@@ -100,7 +100,7 @@ export function SortableItemRow({ item, sectionId, onToggleItem, onEditItem }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.6 : 1,
+    opacity: isDragging ? 0 : 1,
   }
 
   return (
@@ -150,7 +150,7 @@ export function LibraryDraggableItem({ item }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.6 : 1,
+    opacity: isDragging ? 0 : 1,
   }
 
   return (
@@ -186,7 +186,7 @@ export function LibraryDraggableSection({ title, items, active, onSelect }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.6 : 1,
+    opacity: isDragging ? 0 : 1,
   }
 
   return (

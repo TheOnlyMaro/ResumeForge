@@ -146,6 +146,7 @@ function Builder({ onNavigate }) {
   })
   const [activeDragItem, setActiveDragItem] = useState(null)
   const [activeDragSection, setActiveDragSection] = useState(null)
+  const [librarySectionInsertIndex, setLibrarySectionInsertIndex] = useState(-1)
   const [dismissNotice, setDismissNotice] = useState({
     visible: false,
     message: '',
@@ -752,6 +753,7 @@ function Builder({ onNavigate }) {
     const { active, over } = event
     setActiveDragItem(null)
     setActiveDragSection(null)
+    setLibrarySectionInsertIndex(-1)
     if (!over || active.id === over.id) {
       return
     }
@@ -795,8 +797,20 @@ function Builder({ onNavigate }) {
         if (targetIndex === -1) {
           return [...sections, newSection]
         }
+        const insertionIndex =
+          librarySectionInsertIndex >= 0
+            ? librarySectionInsertIndex
+            : targetIndex + 1
         const nextSections = [...sections]
-        nextSections.splice(targetIndex + 1, 0, newSection)
+        if (insertionIndex <= 0) {
+          nextSections.unshift(newSection)
+          return nextSections
+        }
+        if (insertionIndex >= nextSections.length) {
+          nextSections.push(newSection)
+          return nextSections
+        }
+        nextSections.splice(insertionIndex, 0, newSection)
         return nextSections
       })
       return
@@ -878,15 +892,46 @@ function Builder({ onNavigate }) {
     if (activeType === 'library-item') {
       setActiveDragItem(event.active.data.current?.item ?? null)
       setActiveDragSection(null)
+      setLibrarySectionInsertIndex(-1)
     } else if (activeType === 'library-section') {
       setActiveDragSection({
         title: event.active.data.current?.title ?? 'Section',
         count: event.active.data.current?.items?.length ?? 0,
       })
       setActiveDragItem(null)
+      setLibrarySectionInsertIndex(resumeSections.length)
     } else {
       setActiveDragItem(null)
       setActiveDragSection(null)
+      setLibrarySectionInsertIndex(-1)
+    }
+  }
+
+  const handleDragOver = (event) => {
+    const activeType = event.active.data.current?.type
+    if (activeType !== 'library-section') {
+      return
+    }
+
+    const overType = event.over?.data.current?.type
+    if (!event.over || !overType) {
+      return
+    }
+
+    if (overType === 'resume-root') {
+      setLibrarySectionInsertIndex(resumeSections.length)
+      return
+    }
+
+    if (overType === 'item' || overType === 'section') {
+      const targetSectionId =
+        overType === 'item' ? event.over.data.current?.sectionId : event.over.id
+      const targetIndex = resumeSections.findIndex(
+        (section) => section.id === targetSectionId,
+      )
+      if (targetIndex >= 0) {
+        setLibrarySectionInsertIndex(targetIndex + 1)
+      }
     }
   }
 
@@ -937,7 +982,11 @@ function Builder({ onNavigate }) {
           </div>
         </div>
 
-        <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
           <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr_1fr]">
             <LibraryPanel
               librarySections={librarySections}
@@ -958,6 +1007,7 @@ function Builder({ onNavigate }) {
               onEditItem={openEditItem}
               onEditTitle={openEditTitle}
               activeDragSection={activeDragSection}
+              insertIndex={librarySectionInsertIndex}
             />
           </div>
           <DragOverlay>

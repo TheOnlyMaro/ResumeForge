@@ -12,6 +12,7 @@ function ResumePanel({
   onEditItem,
   onEditTitle,
   activeDragSection,
+  insertIndex,
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: 'resume-root',
@@ -20,6 +21,31 @@ function ResumePanel({
   const selectedTitle =
     resumeSections.find((section) => section.id === selectedResumeSectionId)
       ?.title || 'No section selected'
+
+  const shouldShowInsert =
+    activeDragSection && insertIndex !== undefined && insertIndex >= 0
+  const placeholderLabel = activeDragSection
+    ? `Add ${activeDragSection.title}`
+    : 'Add section'
+
+  const sectionsWithPlaceholder = shouldShowInsert
+    ? resumeSections.reduce((acc, section, index) => {
+        if (index === insertIndex) {
+          acc.push({
+            id: 'library-section-placeholder',
+            placeholder: true,
+          })
+        }
+        acc.push(section)
+        return acc
+      }, [])
+    : resumeSections
+  if (shouldShowInsert && insertIndex >= resumeSections.length) {
+    sectionsWithPlaceholder.push({
+      id: 'library-section-placeholder',
+      placeholder: true,
+    })
+  }
 
   return (
     <section
@@ -66,18 +92,27 @@ function ResumePanel({
           items={resumeSections.map((section) => section.id)}
           strategy={verticalListSortingStrategy}
         >
-          {resumeSections.map((section) => (
-            <SortableSectionCard
-              key={section.id}
-              section={section}
-              onToggleItem={onToggleItem}
-              onAddItem={onAddItem}
-              onEditSection={onEditSection}
-              onEditItem={onEditItem}
-              onSelectSection={onSelectSection}
-              selected={section.id === selectedResumeSectionId}
-            />
-          ))}
+          {sectionsWithPlaceholder.map((section) =>
+            section.placeholder ? (
+              <div
+                key={section.id}
+                className="rounded-2xl border border-amber-400/70 bg-amber-500/10 px-4 py-3 text-xs uppercase tracking-[0.2em] text-amber-100"
+              >
+                {placeholderLabel}
+              </div>
+            ) : (
+              <SortableSectionCard
+                key={section.id}
+                section={section}
+                onToggleItem={onToggleItem}
+                onAddItem={onAddItem}
+                onEditSection={onEditSection}
+                onEditItem={onEditItem}
+                onSelectSection={onSelectSection}
+                selected={section.id === selectedResumeSectionId}
+              />
+            ),
+          )}
         </SortableContext>
       </div>
     </section>
