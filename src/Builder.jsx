@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { DndContext, DragOverlay } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import { defaultResume } from './data/defaultResume'
@@ -701,17 +701,10 @@ function Builder({ onNavigate }) {
     closeModal()
   }
 
+  // ── Created Resume: only enabled items from the active draft ─────────────
   const buildResumeFromState = () => {
-    const educationSection = resumeSections.find(
-      (section) => section.kind === 'education',
-    )
-    const languageSection = resumeSections.find(
-      (section) => section.kind === 'language',
-    )
-    const customSections = resumeSections.filter(
-      (section) => !['education', 'language'].includes(section.kind ?? 'custom'),
-    )
-
+    // 1. Education
+    const educationSection = resumeSections.find((s) => s.kind === 'education')
     const educationItems = (educationSection?.items ?? [])
       .filter((item) => item.enabled)
       .map((item) => ({
@@ -723,7 +716,9 @@ function Builder({ onNavigate }) {
         bullets: item.bullets || [],
       }))
 
-    const sections = customSections
+    // 2. Custom sections (Experience, Projects, etc.)
+    const sections = resumeSections
+      .filter((s) => !['education', 'language'].includes(s.kind ?? 'custom'))
       .map((section) => ({
         title: section.title.toUpperCase(),
         items: section.items
@@ -736,11 +731,12 @@ function Builder({ onNavigate }) {
             details: item.details || [],
           })),
       }))
-      .filter((section) => section.items.length)
+      .filter((s) => s.items.length)
 
-    const languageItem = (languageSection?.items ?? []).find(
-      (item) => item.enabled,
-    )
+    // 3. Languages
+    const languageSection = resumeSections.find((s) => s.kind === 'language')
+    const activeLangItems = languageSection?.items ?? []
+    const languageItem = activeLangItems.find((item) => item.enabled)
     const languages = languageItem?.languages?.length
       ? languageItem.languages
       : defaultResume.languages
@@ -749,14 +745,76 @@ function Builder({ onNavigate }) {
       ...defaultResume,
       name: titleData.name || defaultResume.name,
       subtitle: titleData.subtitle || defaultResume.subtitle,
-      contacts: titleData.contacts?.length
-        ? titleData.contacts
-        : defaultResume.contacts,
+      contacts: titleData.contacts?.length ? titleData.contacts : defaultResume.contacts,
       education: educationItems,
       sections,
       languages,
     }
   }
+
+  // ── Master CV: purely from the library, no merging with active draft ──────
+  const buildMasterResume = () => {
+    // 1. Education — library items only
+    const libEduKey = Object.keys(libraryItems).find(
+      (k) => k.toLowerCase() === 'education',
+    )
+    const libEduItems = libEduKey ? libraryItems[libEduKey] : []
+    const educationItems = libEduItems.map((item) => ({
+      degree: item.degree || '',
+      school: item.school || '',
+      location: item.location || '',
+      subtitle: item.field || item.subtitle || '',
+      dates: item.dates || '',
+      bullets: item.bullets || [],
+    }))
+
+    // 2. Custom sections — library sections only, library items only
+    const sections = librarySections
+      .map((sectionName) => {
+        const libKey = Object.keys(libraryItems).find(
+          (k) => k.toLowerCase() === sectionName.toLowerCase(),
+        )
+        const libList = libKey ? libraryItems[libKey] : []
+        return {
+          title: sectionName.toUpperCase(),
+          items: libList.map((item) => ({
+            title: item.title || item.label || '',
+            location: item.location || '',
+            subtitle: item.subtitle || '',
+            dates: item.dates || '',
+            details: item.details || item.bullets || [],
+          })),
+        }
+      })
+      .filter((s) => s.items.length)
+
+    // 3. Languages — library items only
+    const libLangKey = Object.keys(libraryItems).find(
+      (k) => k.toLowerCase() === 'languages' || k.toLowerCase() === 'language',
+    )
+    const libLangItems = libLangKey ? libraryItems[libLangKey] : []
+    const languages = libLangItems.length
+      ? libLangItems.flatMap((item) => item.languages || [])
+      : defaultResume.languages
+
+    return {
+      ...defaultResume,
+      name: titleData.name || defaultResume.name,
+      subtitle: titleData.subtitle || defaultResume.subtitle,
+      contacts: titleData.contacts?.length ? titleData.contacts : defaultResume.contacts,
+      education: educationItems,
+      sections,
+      languages,
+    }
+  }
+
+  const compiledResume = useMemo(() => {
+    return buildResumeFromState()
+  }, [resumeSections, titleData])
+
+  const masterResume = useMemo(() => {
+    return buildMasterResume()
+  }, [libraryItems, librarySections, titleData])
 
   const handleDragEnd = (event) => {
     const { active, over } = event
@@ -1009,7 +1067,7 @@ function Builder({ onNavigate }) {
             <button
               type="button"
               onClick={async () => {
-                await buildResumePdf(buildResumeFromState())
+                await buildResumePdf(compiledResume)
               }}
               className="rounded-full bg-white px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 transition hover:bg-slate-900 hover:text-white"
             >
@@ -1039,7 +1097,7 @@ function Builder({ onNavigate }) {
               onAddSection={openAddSection}
               onAddItem={openAddItem}
             />
-            <LivePdfPanel />
+            <LivePdfPanel resume={compiledResume} masterResume={masterResume} />
             <ResumePanel
               resumeSections={resumeSections}
               onToggleItem={toggleItem}

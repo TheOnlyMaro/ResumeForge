@@ -60,19 +60,35 @@ const registerCalibriFonts = (doc) => {
   doc.addFont('calibri-bold-italic.ttf', 'Calibri', 'bolditalic')
 }
 
-export async function buildResumePdf(resume = defaultResume) {
+export async function generateResumePdfDoc(resume = defaultResume) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' })
   await loadCalibriFonts()
   registerCalibriFonts(doc)
 
   const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
   const margin = 40
-  let y = 50
+  const topMargin = 50
+  const bottomMargin = 50
+  const pageBottom = pageHeight - bottomMargin
+  let y = topMargin
 
   const centerX = pageWidth / 2
   const leftX = margin
   const rightX = pageWidth - margin
+  const contentWidth = rightX - leftX
 
+  // ── Pagination helper ──────────────────────────────────────────────────────
+  // Call before drawing anything. If y + needed height would exceed the page
+  // bottom, a new page is added and y is reset to the top margin.
+  const checkPageBreak = (neededHeight) => {
+    if (y + neededHeight > pageBottom) {
+      doc.addPage()
+      y = topMargin
+    }
+  }
+
+  // ── Header (name, subtitle, contacts) ────────────────────────────────────
   doc.setFont('Calibri', 'bold')
   doc.setFontSize(18)
   doc.text(resume.name, centerX, y, { align: 'center' })
@@ -106,7 +122,7 @@ export async function buildResumePdf(resume = defaultResume) {
   const normalizeLink = (value, label) => {
     const trimmed = (value || '').trim()
     const fallbackLabel = (label || '').trim()
-    
+
     // If the user didn't specify a link, but the label looks like an email or a website, use the label
     let targetLink = trimmed
     if (!targetLink) {
@@ -129,13 +145,13 @@ export async function buildResumePdf(resume = defaultResume) {
       }
       return ''
     }
-    
+
     // If it's an email address, prepend mailto:
     if (isEmail(targetLink)) {
       return `mailto:${targetLink}`
     }
-    
-    // Otherwise, append https:// before the user-added link
+
+    // Otherwise, prepend https:// to the user-entered link
     return `https://${targetLink}`
   }
 
@@ -172,7 +188,12 @@ export async function buildResumePdf(resume = defaultResume) {
 
   y += 16
 
+  // ── Draw helpers ──────────────────────────────────────────────────────────
+
   const drawSectionTitle = (title) => {
+    // Keep section title + at least one line of content on the same page.
+    // Minimum block: title line (12) + rule gap (12) + one body line (12) = 36pt
+    checkPageBreak(36)
     doc.setFont('Calibri', 'bold')
     doc.setFontSize(12)
     doc.text(title, leftX, y)
@@ -184,6 +205,7 @@ export async function buildResumePdf(resume = defaultResume) {
   }
 
   const drawLinePair = (leftText, rightText, style = 'normal') => {
+    checkPageBreak(12)
     doc.setFont('Calibri', style)
     doc.setFontSize(11)
     doc.text(leftText, leftX, y)
@@ -192,6 +214,7 @@ export async function buildResumePdf(resume = defaultResume) {
   }
 
   const drawSubLinePair = (leftText, rightText) => {
+    checkPageBreak(11)
     doc.setFont('Calibri', 'italic')
     doc.setFontSize(10)
     doc.text(leftText, leftX, y)
@@ -202,27 +225,68 @@ export async function buildResumePdf(resume = defaultResume) {
   const drawBullets = (bullets) => {
     const bulletIndent = 18
     const bulletRadius = 1.6
+    const lineHeight = 12
+    const wrapWidth = contentWidth - bulletIndent
+
     bullets.forEach((bullet) => {
       const [label, rest] = bullet.split(/:(.+)/)
-      doc.setDrawColor(0, 0, 0)
-      doc.setFillColor(0, 0, 0)
-      doc.circle(leftX + 6, y - 3, bulletRadius, 'F')
+
       if (rest) {
+        // Bold-label + normal-rest style bullet (e.g. "Skill: description")
         doc.setFont('Calibri', 'bold')
         doc.setFontSize(10)
         const labelText = `${label.trim()}:`
-        doc.text(labelText, leftX + bulletIndent, y)
         const labelWidth = doc.getTextWidth(labelText)
+        const restText = rest.trim()
+
+        // Wrap the rest portion if it overflows the line
         doc.setFont('Calibri', 'normal')
-        doc.text(rest.trim(), leftX + bulletIndent + labelWidth + 4, y)
+        const restLines = doc.splitTextToSize(restText, wrapWidth - labelWidth - 4)
+        checkPageBreak(lineHeight * restLines.length)
+
+        doc.setDrawColor(0, 0, 0)
+        doc.setFillColor(0, 0, 0)
+        doc.circle(leftX + 6, y - 3, bulletRadius, 'F')
+
+        doc.setFont('Calibri', 'bold')
+        doc.setFontSize(10)
+        doc.text(labelText, leftX + bulletIndent, y)
+
+        doc.setFont('Calibri', 'normal')
+        restLines.forEach((line, lineIdx) => {
+          if (lineIdx === 0) {
+            doc.text(line, leftX + bulletIndent + labelWidth + 4, y)
+          } else {
+            y += lineHeight
+            checkPageBreak(lineHeight)
+            doc.text(line, leftX + bulletIndent + labelWidth + 4, y)
+          }
+        })
+        y += lineHeight
       } else {
+        // Plain bullet — wrap long lines across the content width
         doc.setFont('Calibri', 'normal')
         doc.setFontSize(10)
-        doc.text(bullet, leftX + bulletIndent, y)
+        const wrappedLines = doc.splitTextToSize(bullet, wrapWidth)
+        checkPageBreak(lineHeight * wrappedLines.length)
+
+        doc.setDrawColor(0, 0, 0)
+        doc.setFillColor(0, 0, 0)
+        doc.circle(leftX + 6, y - 3, bulletRadius, 'F')
+
+        wrappedLines.forEach((line, lineIdx) => {
+          if (lineIdx > 0) {
+            y += lineHeight
+            checkPageBreak(lineHeight)
+          }
+          doc.text(line, leftX + bulletIndent, y)
+        })
+        y += lineHeight
       }
-      y += 12
     })
   }
+
+  // ── Content ───────────────────────────────────────────────────────────────
 
   drawSectionTitle('EDUCATION')
   resume.education.forEach((item) => {
@@ -247,9 +311,15 @@ export async function buildResumePdf(resume = defaultResume) {
   })
 
   drawSectionTitle('LANGUAGES')
+  checkPageBreak(12)
   doc.setFont('Calibri', 'normal')
   doc.setFontSize(10)
   doc.text(resume.languages.join(' | '), leftX, y)
 
+  return doc
+}
+
+export async function buildResumePdf(resume = defaultResume) {
+  const doc = await generateResumePdfDoc(resume)
   doc.save('Resume-Forge-Sample.pdf')
 }
