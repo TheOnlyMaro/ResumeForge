@@ -1,4 +1,5 @@
-import { LibraryDraggableItem, LibraryDraggableSection } from './DragItems'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { LibrarySortableSection, LibrarySortableItem } from './DragItems'
 
 function LibraryPanel({
   librarySections,
@@ -8,11 +9,18 @@ function LibraryPanel({
   onAddSection,
   onAddItem,
 }) {
+  // IDs used by the section-level SortableContext (must be strings)
+  const sectionSortIds = librarySections.map((s) => `lib-section-sort-${s}`)
+
+  // IDs for the item-level SortableContext (active section items)
+  const activeItems = libraryItems[libraryActiveSection] ?? []
+  const itemSortIds = activeItems.map((item) => `lib-sort-${item.id}`)
+
   return (
     <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-base font-semibold uppercase tracking-[0.3em] text-slate-300">
-          Library
+          Master CV Library
         </h2>
         <span className="text-xs text-slate-500">Drag into resume</span>
       </div>
@@ -35,16 +43,21 @@ function LibraryPanel({
               Add
             </button>
           </summary>
-          <div className="flex flex-col gap-3">
-            {librarySections.map((item) => (
-              <LibraryDraggableSection
-                key={item}
-                title={item}
-                items={libraryItems[item] ?? []}
-                active={libraryActiveSection === item}
-                onSelect={() => onSelectSection(item)}
-              />
-            ))}
+          <div className="flex flex-col gap-3 pt-2">
+            <SortableContext
+              items={sectionSortIds}
+              strategy={verticalListSortingStrategy}
+            >
+              {librarySections.map((item) => (
+                <LibrarySortableSection
+                  key={item}
+                  title={item}
+                  items={libraryItems[item] ?? []}
+                  active={libraryActiveSection === item}
+                  onSelect={() => onSelectSection(item)}
+                />
+              ))}
+            </SortableContext>
           </div>
         </details>
 
@@ -70,9 +83,14 @@ function LibraryPanel({
             {libraryActiveSection}
           </p>
           <div className="flex flex-col gap-3">
-            {(libraryItems[libraryActiveSection] ?? []).map((item) => (
-              <LibraryDraggableItem key={item.id} item={item} />
-            ))}
+            <SortableContext
+              items={itemSortIds}
+              strategy={verticalListSortingStrategy}
+            >
+              {activeItems.map((item) => (
+                <LibrarySortableItem key={item.id} item={item} />
+              ))}
+            </SortableContext>
           </div>
         </details>
       </div>

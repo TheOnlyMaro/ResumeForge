@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -40,6 +41,7 @@ export function SortableSectionCard({
   return (
     <div
       ref={setNodeRef}
+      id={section.id}
       style={style}
       className={`rounded-2xl border bg-slate-950/40 p-3 transition hover:border-slate-700 will-change-transform ${
         isDragging
@@ -73,6 +75,13 @@ export function SortableSectionCard({
           </button>
           <button
             type="button"
+            onClick={() => onEditSection?.(section.id)}
+            className="rounded-full border border-slate-700 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-amber-300 hover:bg-amber-300/10 hover:text-amber-100"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
             onClick={() => onRemoveSection?.(section.id)}
             className="rounded-full border border-slate-700 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-rose-300 hover:bg-rose-500/10 hover:text-rose-100"
           >
@@ -86,9 +95,11 @@ export function SortableSectionCard({
       >
         <div className="flex flex-col gap-2">
           {section.items.map((item, index) => (
-            <div key={item.id} className="flex flex-col gap-2">
+            <Fragment key={item.id}>
               {showItemInsert && itemInsertIndex === index && (
-                <div className="rounded-xl border border-amber-400/70 bg-amber-500/10 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-amber-100">
+                <div
+                  className="rounded-xl border border-amber-400/70 bg-amber-500/10 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-amber-100"
+                >
                   Drop item here
                 </div>
               )}
@@ -99,7 +110,7 @@ export function SortableSectionCard({
                 onRemoveItem={onRemoveItem}
                 onEditItem={onEditItem}
               />
-            </div>
+            </Fragment>
           ))}
           {showItemInsert && itemInsertIndex === section.items.length && (
             <div className="rounded-xl border border-amber-400/70 bg-amber-500/10 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-amber-100">
@@ -138,6 +149,7 @@ export function SortableItemRow({
   return (
     <div
       ref={setNodeRef}
+      id={item.id}
       style={style}
       className={`flex items-center justify-between rounded-xl border bg-slate-900/60 px-3 py-2 transition hover:border-slate-700 hover:bg-slate-900/80 will-change-transform ${
         isDragging
@@ -189,6 +201,57 @@ export function SortableItemRow({
   )
 }
 
+// ── Library: sortable items (within their section) ─────────────────────────
+export function LibrarySortableItem({ item }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: `lib-sort-${item.id}`,
+    data: { type: 'library-item', item },
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? 'none' : transition,
+    opacity: isDragging ? 0.4 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      id={`lib-sort-${item.id}`}
+      style={style}
+      className={`flex items-center justify-between rounded-2xl border px-4 py-3 transition hover:border-slate-700 hover:bg-slate-950/60 will-change-transform ${
+        isDragging
+          ? 'border-amber-400/70 bg-slate-950/60 shadow-[0_0_0_1px_rgba(251,191,36,0.4)]'
+          : 'border-slate-800 bg-slate-950/40'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          {...attributes}
+          {...listeners}
+          className="cursor-grab touch-none text-slate-500"
+          aria-label="Drag library item"
+        >
+          ::
+        </button>
+        <span className="text-sm text-slate-200">{item.label}</span>
+      </div>
+      <span className="text-xs text-slate-500">Drag</span>
+    </div>
+  )
+}
+
+// ── Library: draggable item (legacy – kept for drag-to-resume) ─────────────
 export function LibraryDraggableItem({ item }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useDraggable({ id: `library-${item.id}`, data: { type: 'library-item', item } })
@@ -216,6 +279,61 @@ export function LibraryDraggableItem({ item }) {
   )
 }
 
+// ── Library: sortable section card (reorder within library) ────────────────
+export function LibrarySortableSection({ title, items, active, onSelect }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: `lib-section-sort-${title}`,
+    data: { type: 'library-section-sort', title, items },
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? 'none' : transition,
+    opacity: isDragging ? 0.4 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      id={`lib-section-sort-${title}`}
+      style={style}
+      className={`flex items-center justify-between rounded-2xl border px-4 py-3 transition hover:border-slate-700 hover:bg-slate-950/60 will-change-transform ${
+        active
+          ? 'border-amber-400/60 bg-slate-900/50 shadow-[0_0_0_1px_rgba(251,191,36,0.4)]'
+          : isDragging
+            ? 'border-amber-400/70 bg-slate-950/60'
+            : 'border-slate-800 bg-slate-950/40'
+      }`}
+      onClick={onSelect}
+    >
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          {...attributes}
+          {...listeners}
+          className="cursor-grab touch-none text-slate-500"
+          aria-label="Drag library section"
+          onClick={(event) => event.stopPropagation()}
+        >
+          ::
+        </button>
+        <span className="text-sm text-slate-200">{title}</span>
+      </div>
+      <span className="text-xs text-slate-500">Drag</span>
+    </div>
+  )
+}
+
+// ── Library: draggable section (legacy – kept for drag-to-resume) ──────────
 export function LibraryDraggableSection({ title, items, active, onSelect }) {
   const {
     attributes,

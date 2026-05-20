@@ -1,5 +1,10 @@
 import { useState, useMemo } from 'react'
-import { DndContext, DragOverlay } from '@dnd-kit/core'
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  pointerWithin,
+} from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import { defaultResume } from './data/defaultResume'
 import { buildResumePdf } from './pdf/buildResumePdf'
@@ -818,10 +823,16 @@ function Builder({ onNavigate }) {
 
   const handleDragEnd = (event) => {
     const { active, over } = event
+    
+    // Capture drag-over states before resetting them to avoid React's async batching gotchas
+    const itemInsert = { ...libraryItemInsert }
+    const sectionInsertIndex = librarySectionInsertIndex
+
     setActiveDragItem(null)
     setActiveDragSection(null)
     setLibrarySectionInsertIndex(-1)
     setLibraryItemInsert({ sectionId: null, index: -1 })
+
     if (!over || active.id === over.id) {
       return
     }
@@ -829,6 +840,84 @@ function Builder({ onNavigate }) {
     const activeType = active.data.current?.type
     const overType = over.data.current?.type
 
+    // ── Library section: reorder within library OR insert into resume ────────
+    if (activeType === 'library-section-sort') {
+      // Dropped on another library section → reorder within library
+      if (overType === 'library-section-sort') {
+        const activeTitle = active.data.current?.title
+        const overTitle = over.data.current?.title
+        setLibrarySections((sections) => {
+          const oldIndex = sections.indexOf(activeTitle)
+          const newIndex = sections.indexOf(overTitle)
+          if (oldIndex === -1 || newIndex === -1) return sections
+          return arrayMove(sections, oldIndex, newIndex)
+        })
+        return
+      }
+
+      // Dropped on resume area → insert as a new resume section
+      if (
+        overType === 'section' ||
+        overType === 'item' ||
+        overType === 'resume-root'
+      ) {
+        const sectionTitle = active.data.current?.title
+        const sectionItems = active.data.current?.items ?? []
+        if (!sectionTitle) return
+
+        const newSection = buildResumeSectionFromLibrary(sectionTitle, sectionItems)
+
+        if (overType === 'resume-root') {
+          setResumeSections((sections) => [...sections, newSection])
+          return
+        }
+
+        const targetSectionId =
+          overType === 'item' ? over.data.current?.sectionId : over.id
+        if (!targetSectionId) {
+          setResumeSections((sections) => [...sections, newSection])
+          return
+        }
+
+        setResumeSections((sections) => {
+          const targetIndex = sections.findIndex((s) => s.id === targetSectionId)
+          if (targetIndex === -1) return [...sections, newSection]
+          const insertionIndex =
+            sectionInsertIndex >= 0
+              ? sectionInsertIndex
+              : targetIndex + 1
+          const next = [...sections]
+          if (insertionIndex <= 0) { next.unshift(newSection); return next }
+          if (insertionIndex >= next.length) { next.push(newSection); return next }
+          next.splice(insertionIndex, 0, newSection)
+          return next
+        })
+        return
+      }
+    }
+
+    // ── Library item reorder (within its section) ───────────────────────────
+    if (activeType === 'library-item' && overType === 'library-item') {
+      // Only reorder if both IDs start with lib-sort- (i.e. they are in library)
+      if (
+        String(active.id).startsWith('lib-sort-') &&
+        String(over.id).startsWith('lib-sort-')
+      ) {
+        const activeItemId = String(active.id).replace('lib-sort-', '')
+        const overItemId = String(over.id).replace('lib-sort-', '')
+        setLibraryItems((items) => {
+          const section = libraryActiveSection
+          const list = items[section] ?? []
+          const oldIndex = list.findIndex((i) => i.id === activeItemId)
+          const newIndex = list.findIndex((i) => i.id === overItemId)
+          if (oldIndex === -1 || newIndex === -1) return items
+          return { ...items, [section]: arrayMove(list, oldIndex, newIndex) }
+        })
+        return
+      }
+    }
+
+    // ── Library section drag → resume ───────────────────────────────────────
     if (
       activeType === 'library-section' &&
       (overType === 'section' ||
@@ -866,8 +955,8 @@ function Builder({ onNavigate }) {
           return [...sections, newSection]
         }
         const insertionIndex =
-          librarySectionInsertIndex >= 0
-            ? librarySectionInsertIndex
+          sectionInsertIndex >= 0
+            ? sectionInsertIndex
             : targetIndex + 1
         const nextSections = [...sections]
         if (insertionIndex <= 0) {
@@ -884,6 +973,7 @@ function Builder({ onNavigate }) {
       return
     }
 
+    // ── Library item drag → resume section ─────────────────────────────────
     if (activeType === 'library-item' && (overType === 'section' || overType === 'item')) {
       const libraryItem = active.data.current?.item
       const targetSectionId =
@@ -902,22 +992,22 @@ function Builder({ onNavigate }) {
           }
           const newItem = buildResumeItemFromLibrary(libraryItem, section.kind ?? 'custom')
           const nextItems = [...section.items]
-          if (overType === 'item') {
-            const overIndex = nextItems.findIndex((item) => item.id === over.id)
-            if (overIndex >= 0) {
-              nextItems.splice(overIndex + 1, 0, newItem)
-            } else {
-              nextItems.push(newItem)
-            }
-          } else {
-            nextItems.push(newItem)
-          }
+          
+          // Use the index computed during handleDragOver if available
+          const insertIdx = (itemInsert && itemInsert.sectionId === targetSectionId && itemInsert.index >= 0)
+            ? itemInsert.index
+            : (overType === 'item'
+                ? Math.max(0, nextItems.findIndex((item) => item.id === over.id)) + 1
+                : nextItems.length)
+
+          nextItems.splice(insertIdx, 0, newItem)
           return { ...section, items: nextItems }
         }),
       )
       return
     }
 
+    // ── Resume section reorder ──────────────────────────────────────────────
     if (activeType === 'section' && overType === 'section') {
       setResumeSections((sections) => {
         const oldIndex = sections.findIndex((section) => section.id === active.id)
@@ -927,10 +1017,11 @@ function Builder({ onNavigate }) {
       return
     }
 
+    // ── Resume item reorder (within its section) ────────────────────────────
     if (activeType === 'item' && overType === 'item') {
       const activeSectionId = active.data.current?.sectionId
       const overSectionId = over.data.current?.sectionId
-      if (activeSectionId !== overSectionId) {
+      if (!activeSectionId || activeSectionId !== overSectionId) {
         return
       }
 
@@ -946,6 +1037,7 @@ function Builder({ onNavigate }) {
           const newIndex = section.items.findIndex(
             (item) => item.id === over.id,
           )
+          if (oldIndex === -1 || newIndex === -1) return section
           return {
             ...section,
             items: arrayMove(section.items, oldIndex, newIndex),
@@ -963,6 +1055,16 @@ function Builder({ onNavigate }) {
       setLibrarySectionInsertIndex(-1)
       setLibraryItemInsert({ sectionId: null, index: -1 })
     } else if (activeType === 'library-section') {
+      setActiveDragSection({
+        title: event.active.data.current?.title ?? 'Section',
+        count: event.active.data.current?.items?.length ?? 0,
+      })
+      setActiveDragItem(null)
+      setLibrarySectionInsertIndex(resumeSections.length)
+      setLibraryItemInsert({ sectionId: null, index: -1 })
+    } else if (activeType === 'library-section-sort') {
+      // Show item-count overlay and prime the resume insert index —
+      // this section can be sorted within library OR dropped into resume
       setActiveDragSection({
         title: event.active.data.current?.title ?? 'Section',
         count: event.active.data.current?.items?.length ?? 0,
@@ -998,14 +1100,35 @@ function Builder({ onNavigate }) {
         setLibraryItemInsert({ sectionId: null, index: -1 })
         return
       }
+      
       if (overType === 'item') {
         const overIndex = targetSection.items.findIndex(
           (item) => item.id === event.over.id,
         )
-        setLibraryItemInsert({
-          sectionId: targetSectionId,
-          index: overIndex >= 0 ? overIndex + 1 : targetSection.items.length,
-        })
+        const overEl = document.getElementById(event.over.id)
+        if (overEl && overIndex >= 0) {
+          const rect = overEl.getBoundingClientRect()
+          const overMidY = rect.top + rect.height / 2
+          
+          let dragY
+          if (event.pointerCoordinates) {
+            dragY = event.pointerCoordinates.y
+          } else {
+            const translated = event.active.rect.current.translated
+            dragY = translated ? (translated.top + translated.height / 2) : rect.top
+          }
+          
+          const insertIdx = dragY < overMidY ? overIndex : overIndex + 1
+          setLibraryItemInsert({
+            sectionId: targetSectionId,
+            index: insertIdx,
+          })
+        } else {
+          setLibraryItemInsert({
+            sectionId: targetSectionId,
+            index: overIndex >= 0 ? overIndex + 1 : targetSection.items.length,
+          })
+        }
       } else {
         setLibraryItemInsert({
           sectionId: targetSectionId,
@@ -1015,12 +1138,14 @@ function Builder({ onNavigate }) {
       return
     }
 
-    if (activeType !== 'library-section') {
+    // Both library-section and library-section-sort can be dropped into the resume
+    if (activeType !== 'library-section' && activeType !== 'library-section-sort') {
       return
     }
 
     if (overType === 'resume-root') {
-      setLibrarySectionInsertIndex(resumeSections.length)
+      // Cursor is in a gap between sections — preserve the last valid insert
+      // position instead of snapping to the bottom every time.
       return
     }
 
@@ -1031,7 +1156,27 @@ function Builder({ onNavigate }) {
         (section) => section.id === targetSectionId,
       )
       if (targetIndex >= 0) {
-        setLibrarySectionInsertIndex(targetIndex + 1)
+        // Compare the cursor position (or drag midpoint) with the vertical midpoint
+        // of the parent SectionCard DOM element (not the individual items)
+        const sectionEl = document.getElementById(targetSectionId)
+        if (sectionEl) {
+          const rect = sectionEl.getBoundingClientRect()
+          const overMidY = rect.top + rect.height / 2
+          
+          let dragY
+          if (event.pointerCoordinates) {
+            dragY = event.pointerCoordinates.y
+          } else {
+            const translated = event.active.rect.current.translated
+            dragY = translated ? (translated.top + translated.height / 2) : rect.top
+          }
+          
+          setLibrarySectionInsertIndex(
+            dragY < overMidY ? targetIndex : targetIndex + 1,
+          )
+        } else {
+          setLibrarySectionInsertIndex(targetIndex + 1)
+        }
       }
     }
   }
@@ -1084,6 +1229,85 @@ function Builder({ onNavigate }) {
         </div>
 
         <DndContext
+          collisionDetection={(args) => {
+            const activeType = args.active?.data?.current?.type
+            
+            // Resume section or item sorting: use standard closestCenter
+            if (activeType === 'section' || activeType === 'item') {
+              return closestCenter(args)
+            }
+            
+            // For all cross-panel drags (library-section-sort, library-section, library-item)
+            if (
+              activeType === 'library-section' ||
+              activeType === 'library-section-sort' ||
+              activeType === 'library-item'
+            ) {
+              const pointerHits = pointerWithin(args)
+              const isOverResume = pointerHits.some(
+                (hit) =>
+                  hit.id === 'resume-root' ||
+                  hit.data?.current?.type === 'section' ||
+                  hit.data?.current?.type === 'item',
+              )
+              
+              if (isOverResume) {
+                const resumeTargets = args.droppableContainers.filter((container) => {
+                  const type = container.data.current?.type
+                  return type === 'section' || type === 'item'
+                })
+                
+                if (resumeTargets.length > 0) {
+                  let dragY
+                  if (args.pointerCoordinates) {
+                    dragY = args.pointerCoordinates.y
+                  } else {
+                    const translated = args.active.rect.current.translated
+                    dragY = translated ? (translated.top + translated.height / 2) : 0
+                  }
+                  
+                  let closestContainer = null
+                  let minDistance = Infinity
+                  
+                  for (const container of resumeTargets) {
+                    const el = document.getElementById(container.id)
+                    if (el) {
+                      const rect = el.getBoundingClientRect()
+                      const midY = rect.top + rect.height / 2
+                      const distance = Math.abs(dragY - midY)
+                      if (distance < minDistance) {
+                        minDistance = distance
+                        closestContainer = container
+                      }
+                    } else if (container.rect.current) {
+                      const rect = container.rect.current
+                      const midY = rect.top + rect.height / 2
+                      const distance = Math.abs(dragY - midY)
+                      if (distance < minDistance) {
+                        minDistance = distance
+                        closestContainer = container
+                      }
+                    }
+                  }
+                  
+                  if (closestContainer) {
+                    return [{ id: closestContainer.id, data: closestContainer.data.current }]
+                  }
+                }
+                
+                // Fallback to resume-root if no section or item is close
+                const resumeRoot = args.droppableContainers.find((c) => c.id === 'resume-root')
+                if (resumeRoot) {
+                  return [{ id: 'resume-root', data: resumeRoot.data.current }]
+                }
+              }
+            }
+            
+            // Standard pointerHits / closestCenter fallback
+            const pointerHits = pointerWithin(args)
+            if (pointerHits.length > 0) return pointerHits
+            return closestCenter(args)
+          }}
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
