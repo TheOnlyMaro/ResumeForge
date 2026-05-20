@@ -106,19 +106,37 @@ export async function buildResumePdf(resume = defaultResume) {
   const normalizeLink = (value, label) => {
     const trimmed = (value || '').trim()
     const fallbackLabel = (label || '').trim()
-    if (!trimmed) {
-      return isEmail(fallbackLabel) ? `mailto:${fallbackLabel}` : ''
+    
+    // If the user didn't specify a link, but the label looks like an email or a website, use the label
+    let targetLink = trimmed
+    if (!targetLink) {
+      if (isEmail(fallbackLabel)) {
+        return `mailto:${fallbackLabel}`
+      }
+      // If the label contains a dot and no spaces (e.g., github.com/user), treat it as a link
+      if (/^[^\s]+\.[^\s]+$/.test(fallbackLabel)) {
+        targetLink = fallbackLabel
+      } else {
+        return ''
+      }
     }
-    if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) {
-      if (/^(https?|mailto):/i.test(trimmed)) {
-        return trimmed
+
+    // Check if the link already starts with a protocol
+    if (/^[a-z][a-z0-9+.-]*:/i.test(targetLink)) {
+      // Only allow secure / safe protocols
+      if (/^(https?|mailto):/i.test(targetLink)) {
+        return targetLink
       }
       return ''
     }
-    if (isEmail(trimmed)) {
-      return `mailto:${trimmed}`
+    
+    // If it's an email address, prepend mailto:
+    if (isEmail(targetLink)) {
+      return `mailto:${targetLink}`
     }
-    return `https://${trimmed}`
+    
+    // Otherwise, append https:// before the user-added link
+    return `https://${targetLink}`
   }
 
   const separator = ' | '
