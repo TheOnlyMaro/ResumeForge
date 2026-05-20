@@ -8,7 +8,7 @@ function LivePdfPanel({ resume, masterResume }) {
   const [createdPageCount, setCreatedPageCount] = useState(1)
   const [masterPageCount, setMasterPageCount] = useState(1)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [zoomScale, setZoomScale] = useState(75) // Default zoom scaled down by 10% to 75% for better UI balance
+  const [zoomScale, setZoomScale] = useState(55) // Default zoom scaled to 55%
 
   // Hand Tool Panning State
   const [isHandTool, setIsHandTool] = useState(false)
