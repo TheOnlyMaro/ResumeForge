@@ -288,15 +288,17 @@ export async function generateResumePdfDoc(resume = defaultResume) {
 
   // ── Content ───────────────────────────────────────────────────────────────
 
-  drawSectionTitle('EDUCATION')
-  resume.education.forEach((item) => {
-    drawLinePair(`${item.degree} - ${item.school}`, item.location, 'bold')
-    drawSubLinePair(item.subtitle, item.dates)
-    if (item.bullets?.length) {
-      drawBullets(item.bullets)
-    }
-    y += 6
-  })
+  if (resume.education?.length) {
+    drawSectionTitle('EDUCATION')
+    resume.education.forEach((item) => {
+      drawLinePair(`${item.degree} - ${item.school}`, item.location, 'bold')
+      drawSubLinePair(item.subtitle, item.dates)
+      if (item.bullets?.length) {
+        drawBullets(item.bullets)
+      }
+      y += 6
+    })
+  }
 
   resume.sections.forEach((section) => {
     drawSectionTitle(section.title)
@@ -310,11 +312,13 @@ export async function generateResumePdfDoc(resume = defaultResume) {
     })
   })
 
-  drawSectionTitle('LANGUAGES')
-  checkPageBreak(12)
-  doc.setFont('Calibri', 'normal')
-  doc.setFontSize(10)
-  doc.text(resume.languages.join(' | '), leftX, y)
+  if (resume.languages?.length) {
+    drawSectionTitle('LANGUAGES')
+    checkPageBreak(12)
+    doc.setFont('Calibri', 'normal')
+    doc.setFontSize(10)
+    doc.text(resume.languages.join(' | '), leftX, y)
+  }
 
   return doc
 }
