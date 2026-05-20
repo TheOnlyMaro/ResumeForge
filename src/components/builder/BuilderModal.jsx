@@ -8,7 +8,6 @@ function BuilderModal({
   onSubmit,
   onClose,
   onBackdropClose,
-  getSectionKind,
 }) {
   if (!modalState.open) {
     return null
@@ -360,18 +359,15 @@ function BuilderModal({
                         ...prev,
                         sectionId: nextSectionId,
                       }))
-                      const nextTitle =
-                        modalState.target === 'library'
-                          ? nextSectionId
-                          : resumeSections.find(
-                              (section) => section.id === nextSectionId,
-                            )?.title
-                      if (nextTitle) {
-                        setModalState((prev) => ({
-                          ...prev,
-                          itemType: getSectionKind(nextTitle),
-                        }))
-                      }
+                      const nextSection = resumeSections.find(
+                            (section) => section.id === nextSectionId,
+                          )
+                          if (nextSection?.kind) {
+                            setModalState((prev) => ({
+                              ...prev,
+                              itemType: nextSection.kind,
+                            }))
+                          }
                     }}
                     className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
                   >

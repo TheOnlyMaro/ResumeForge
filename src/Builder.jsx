@@ -14,6 +14,7 @@ function Builder({ onNavigate }) {
     {
       id: 'education',
       title: 'Education',
+      kind: 'education',
       items: [
         {
           id: 'edu-1',
@@ -32,6 +33,7 @@ function Builder({ onNavigate }) {
     {
       id: 'experience',
       title: 'Experience',
+      kind: 'custom',
       items: [
         {
           id: 'exp-1',
@@ -174,14 +176,12 @@ function Builder({ onNavigate }) {
     languages: '',
   })
 
-  const getSectionKind = (sectionTitle = '') => {
-    const title = sectionTitle.toLowerCase()
-    if (title.includes('education')) {
-      return 'education'
-    }
-    if (title.includes('language')) {
-      return 'language'
-    }
+  // Only call this when CREATING a new section from a user-typed title.
+  // All existing sections carry an explicit `kind` field; read that instead.
+  const inferKindFromTitle = (sectionTitle = '') => {
+    const title = sectionTitle.toLowerCase().trim()
+    if (title === 'education') return 'education'
+    if (title === 'languages' || title === 'language') return 'language'
     return 'custom'
   }
 
@@ -200,21 +200,20 @@ function Builder({ onNavigate }) {
 
   const getLibraryItemType = (item) => item.type || 'custom'
 
-  const isLibraryItemAllowed = (item, targetSectionTitle) => {
-    const targetType = getSectionKind(targetSectionTitle)
+  const isLibraryItemAllowed = (item, targetSection) => {
+    const targetKind = targetSection.kind ?? 'custom'
     const itemType = getLibraryItemType(item)
-    if (targetType === 'education') {
+    if (targetKind === 'education') {
       return itemType === 'education'
     }
-    if (targetType === 'language') {
+    if (targetKind === 'language') {
       return itemType === 'language'
     }
     return itemType === 'custom'
   }
 
-  const buildResumeItemFromLibrary = (item, sectionTitle) => {
-    const targetType = getSectionKind(sectionTitle)
-    if (targetType === 'education') {
+  const buildResumeItemFromLibrary = (item, sectionKind) => {
+    if (sectionKind === 'education') {
       return {
         id: `item-${Date.now()}`,
         type: 'education',
@@ -228,7 +227,7 @@ function Builder({ onNavigate }) {
         enabled: true,
       }
     }
-    if (targetType === 'language') {
+    if (sectionKind === 'language') {
       return {
         id: `item-${Date.now()}`,
         type: 'language',
@@ -261,10 +260,12 @@ function Builder({ onNavigate }) {
 
   const buildResumeSectionFromLibrary = (title, items) => {
     const id = `section-${Date.now()}`
+    const kind = inferKindFromTitle(title)
     return {
       id,
       title,
-      items: items.map((item) => buildResumeItemFromLibrary(item, title)),
+      kind,
+      items: items.map((item) => buildResumeItemFromLibrary(item, kind)),
     }
   }
 
@@ -339,11 +340,11 @@ function Builder({ onNavigate }) {
   }
 
   const openAddItem = (sectionId = '', target = 'resume') => {
-    const resolvedTitle =
+    const resolvedSection = resumeSections.find((section) => section.id === sectionId)
+    const itemType =
       target === 'library'
-        ? libraryActiveSection
-        : resumeSections.find((section) => section.id === sectionId)?.title
-    const itemType = getSectionKind(resolvedTitle || '')
+        ? inferKindFromTitle(libraryActiveSection)
+        : resolvedSection?.kind ?? 'custom'
     setModalForm({
       title: '',
       itemName: '',
@@ -405,7 +406,7 @@ function Builder({ onNavigate }) {
       mode: 'edit',
       type: 'item',
       target: 'resume',
-      itemType: item?.type ?? getSectionKind(section?.title ?? ''),
+      itemType: item?.type ?? section?.kind ?? 'custom',
       sectionId,
       itemId,
     })
@@ -521,9 +522,10 @@ function Builder({ onNavigate }) {
       } else {
         if (modalState.mode === 'add' && modalForm.title.trim()) {
           const newId = `section-${Date.now()}`
+          const newKind = inferKindFromTitle(modalForm.title.trim())
           setResumeSections((sections) => [
             ...sections,
-            { id: newId, title: modalForm.title.trim(), items: [] },
+            { id: newId, title: modalForm.title.trim(), kind: newKind, items: [] },
           ])
         }
         if (modalState.mode === 'edit' && modalForm.title.trim()) {
@@ -701,14 +703,13 @@ function Builder({ onNavigate }) {
 
   const buildResumeFromState = () => {
     const educationSection = resumeSections.find(
-      (section) => getSectionKind(section.title) === 'education',
+      (section) => section.kind === 'education',
     )
     const languageSection = resumeSections.find(
-      (section) => getSectionKind(section.title) === 'language',
+      (section) => section.kind === 'language',
     )
     const customSections = resumeSections.filter(
-      (section) =>
-        !['education', 'language'].includes(getSectionKind(section.title)),
+      (section) => !['education', 'language'].includes(section.kind ?? 'custom'),
     )
 
     const educationItems = (educationSection?.items ?? [])
@@ -838,10 +839,10 @@ function Builder({ onNavigate }) {
           if (section.id !== targetSectionId) {
             return section
           }
-          if (!isLibraryItemAllowed(libraryItem, section.title)) {
+          if (!isLibraryItemAllowed(libraryItem, section)) {
             return section
           }
-          const newItem = buildResumeItemFromLibrary(libraryItem, section.title)
+          const newItem = buildResumeItemFromLibrary(libraryItem, section.kind ?? 'custom')
           const nextItems = [...section.items]
           if (overType === 'item') {
             const overIndex = nextItems.findIndex((item) => item.id === over.id)
@@ -1079,7 +1080,6 @@ function Builder({ onNavigate }) {
         onSubmit={handleModalSubmit}
         onClose={closeModal}
         onBackdropClose={handleBackdropClose}
-        getSectionKind={getSectionKind}
       />
       <DismissNotice
         visible={dismissNotice.visible}
