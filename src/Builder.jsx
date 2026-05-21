@@ -1783,46 +1783,109 @@ function Builder({ onNavigate }) {
         }
 
         if (modalState.mode === 'edit') {
-          setLibraryItems((items) => ({
-            ...items,
-            [targetSection]: (items[targetSection] ?? []).map((item) =>
-              item.id === modalState.itemId
-                ? modalState.itemType === 'education'
-                  ? {
-                      ...item,
-                      label: `${modalForm.degree.trim()} - ${modalForm.school.trim()}`,
-                      degree: modalForm.degree.trim(),
-                      school: modalForm.school.trim(),
-                      location: modalForm.location.trim(),
-                      field: modalForm.field.trim(),
-                      dates: modalForm.dates.trim(),
-                      bullets: splitLines(modalForm.bullets),
-                    }
-                  : modalState.itemType === 'language'
+          if (targetSection !== modalState.sectionId) {
+            let originalItem = null;
+            const originalList = libraryItems[modalState.sectionId] ?? [];
+            originalItem = originalList.find((i) => i.id === modalState.itemId);
+            const enabled = originalItem ? originalItem.enabled : true;
+
+            const destKind = modalState.itemType;
+
+            let updatedItem;
+            if (destKind === 'education') {
+              updatedItem = {
+                id: modalState.itemId,
+                type: 'education',
+                label: `${modalForm.degree.trim()} - ${modalForm.school.trim()}`,
+                degree: modalForm.degree.trim(),
+                school: modalForm.school.trim(),
+                location: modalForm.location.trim(),
+                field: modalForm.field.trim(),
+                dates: modalForm.dates.trim(),
+                bullets: splitLines(modalForm.bullets),
+                enabled,
+              };
+            } else if (destKind === 'language') {
+              updatedItem = {
+                id: modalState.itemId,
+                type: 'language',
+                label: 'Languages',
+                languages: splitList(modalForm.languages),
+                enabled,
+              };
+            } else if (destKind === 'paragraph') {
+              updatedItem = {
+                id: modalState.itemId,
+                type: 'paragraph',
+                label: modalForm.itemName.trim() || (modalForm.paragraph.trim().substring(0, 30) + (modalForm.paragraph.trim().length > 30 ? '...' : '')),
+                name: modalForm.itemName.trim(),
+                paragraph: modalForm.paragraph,
+                enabled,
+              };
+            } else {
+              updatedItem = {
+                id: modalState.itemId,
+                type: destKind,
+                label: modalForm.itemName.trim(),
+                name: modalForm.itemName.trim(),
+                subtitle: modalForm.subtitle.trim(),
+                location: modalForm.location.trim(),
+                dates: modalForm.dates.trim(),
+                details: splitLines(modalForm.details),
+                enabled,
+              };
+            }
+
+            setLibraryItems((items) => {
+              const copy = { ...items };
+              copy[modalState.sectionId] = (copy[modalState.sectionId] ?? []).filter(
+                (item) => item.id !== modalState.itemId
+              );
+              copy[targetSection] = [...(copy[targetSection] ?? []), updatedItem];
+              return copy;
+            });
+          } else {
+            setLibraryItems((items) => ({
+              ...items,
+              [targetSection]: (items[targetSection] ?? []).map((item) =>
+                item.id === modalState.itemId
+                  ? modalState.itemType === 'education'
                     ? {
                         ...item,
-                        label: 'Languages',
-                        languages: splitList(modalForm.languages),
+                        label: `${modalForm.degree.trim()} - ${modalForm.school.trim()}`,
+                        degree: modalForm.degree.trim(),
+                        school: modalForm.school.trim(),
+                        location: modalForm.location.trim(),
+                        field: modalForm.field.trim(),
+                        dates: modalForm.dates.trim(),
+                        bullets: splitLines(modalForm.bullets),
                       }
-                    : modalState.itemType === 'paragraph'
+                    : modalState.itemType === 'language'
                       ? {
                           ...item,
-                          label: modalForm.itemName.trim() || (modalForm.paragraph.trim().substring(0, 30) + (modalForm.paragraph.trim().length > 30 ? '...' : '')),
-                          name: modalForm.itemName.trim(),
-                          paragraph: modalForm.paragraph,
+                          label: 'Languages',
+                          languages: splitList(modalForm.languages),
                         }
-                      : {
-                          ...item,
-                          label: modalForm.itemName.trim(),
-                          name: modalForm.itemName.trim(),
-                          subtitle: modalForm.subtitle.trim(),
-                          location: modalForm.location.trim(),
-                          dates: modalForm.dates.trim(),
-                          details: splitLines(modalForm.details),
-                        }
-                : item
-            ),
-          }))
+                      : modalState.itemType === 'paragraph'
+                        ? {
+                            ...item,
+                            label: modalForm.itemName.trim() || (modalForm.paragraph.trim().substring(0, 30) + (modalForm.paragraph.trim().length > 30 ? '...' : '')),
+                            name: modalForm.itemName.trim(),
+                            paragraph: modalForm.paragraph,
+                          }
+                        : {
+                            ...item,
+                            label: modalForm.itemName.trim(),
+                            name: modalForm.itemName.trim(),
+                            subtitle: modalForm.subtitle.trim(),
+                            location: modalForm.location.trim(),
+                            dates: modalForm.dates.trim(),
+                            details: splitLines(modalForm.details),
+                          }
+                  : item
+              ),
+            }));
+          }
         }
       } else {
         const targetSectionId =
@@ -1898,52 +1961,126 @@ function Builder({ onNavigate }) {
         }
 
         if (modalState.mode === 'edit') {
-          setResumeSections((sections) =>
-            sections.map((section) =>
-              section.id === targetSectionId
-                ? {
+          if (targetSectionId !== modalState.sectionId) {
+            let originalItem = null;
+            const originalSection = resumeSections.find((s) => s.id === modalState.sectionId);
+            if (originalSection) {
+              originalItem = originalSection.items.find((i) => i.id === modalState.itemId);
+            }
+            const enabled = originalItem ? originalItem.enabled : true;
+
+            const destSection = resumeSections.find((s) => s.id === targetSectionId);
+            const destKind = destSection?.kind || 'custom';
+
+            let updatedItem;
+            if (destKind === 'education') {
+              updatedItem = {
+                id: modalState.itemId,
+                type: 'education',
+                label: `${modalForm.degree.trim()} - ${modalForm.school.trim()}`,
+                degree: modalForm.degree.trim(),
+                school: modalForm.school.trim(),
+                location: modalForm.location.trim(),
+                field: modalForm.field.trim(),
+                dates: modalForm.dates.trim(),
+                bullets: splitLines(modalForm.bullets),
+                enabled,
+              };
+            } else if (destKind === 'language') {
+              updatedItem = {
+                id: modalState.itemId,
+                type: 'language',
+                label: 'Languages',
+                languages: splitList(modalForm.languages),
+                enabled,
+              };
+            } else if (destKind === 'paragraph') {
+              updatedItem = {
+                id: modalState.itemId,
+                type: 'paragraph',
+                label: modalForm.itemName.trim() || (modalForm.paragraph.trim().substring(0, 30) + (modalForm.paragraph.trim().length > 30 ? '...' : '')),
+                name: modalForm.itemName.trim(),
+                paragraph: modalForm.paragraph,
+                enabled,
+              };
+            } else {
+              updatedItem = {
+                id: modalState.itemId,
+                type: destKind,
+                label: modalForm.itemName.trim(),
+                name: modalForm.itemName.trim(),
+                subtitle: modalForm.subtitle.trim(),
+                location: modalForm.location.trim(),
+                dates: modalForm.dates.trim(),
+                details: splitLines(modalForm.details),
+                enabled,
+              };
+            }
+
+            setResumeSections((sections) =>
+              sections.map((section) => {
+                if (section.id === modalState.sectionId) {
+                  return {
                     ...section,
-                    items: section.items.map((item) =>
-                      item.id === modalState.itemId
-                        ? modalState.itemType === 'education'
-                          ? {
-                              ...item,
-                              label: `${modalForm.degree.trim()} - ${modalForm.school.trim()}`,
-                              degree: modalForm.degree.trim(),
-                              school: modalForm.school.trim(),
-                              location: modalForm.location.trim(),
-                              field: modalForm.field.trim(),
-                              dates: modalForm.dates.trim(),
-                              bullets: splitLines(modalForm.bullets),
-                            }
-                          : modalState.itemType === 'language'
+                    items: section.items.filter((item) => item.id !== modalState.itemId),
+                  };
+                } else if (section.id === targetSectionId) {
+                  return {
+                    ...section,
+                    items: [...section.items, updatedItem],
+                  };
+                }
+                return section;
+              })
+            );
+          } else {
+            setResumeSections((sections) =>
+              sections.map((section) =>
+                section.id === targetSectionId
+                  ? {
+                      ...section,
+                      items: section.items.map((item) =>
+                        item.id === modalState.itemId
+                          ? modalState.itemType === 'education'
                             ? {
                                 ...item,
-                                label: 'Languages',
-                                languages: splitList(modalForm.languages),
+                                label: `${modalForm.degree.trim()} - ${modalForm.school.trim()}`,
+                                degree: modalForm.degree.trim(),
+                                school: modalForm.school.trim(),
+                                location: modalForm.location.trim(),
+                                field: modalForm.field.trim(),
+                                dates: modalForm.dates.trim(),
+                                bullets: splitLines(modalForm.bullets),
                               }
-                            : modalState.itemType === 'paragraph'
+                            : modalState.itemType === 'language'
                               ? {
                                   ...item,
-                                  label: modalForm.itemName.trim() || (modalForm.paragraph.trim().substring(0, 30) + (modalForm.paragraph.trim().length > 30 ? '...' : '')),
-                                  name: modalForm.itemName.trim(),
-                                  paragraph: modalForm.paragraph,
+                                  label: 'Languages',
+                                  languages: splitList(modalForm.languages),
                                 }
-                              : {
-                                  ...item,
-                                  label: modalForm.itemName.trim(),
-                                  name: modalForm.itemName.trim(),
-                                  subtitle: modalForm.subtitle.trim(),
-                                  location: modalForm.location.trim(),
-                                  dates: modalForm.dates.trim(),
-                                  details: splitLines(modalForm.details),
-                                }
-                        : item,
-                    ),
-                  }
-                : section,
-            ),
-          )
+                              : modalState.itemType === 'paragraph'
+                                ? {
+                                    ...item,
+                                    label: modalForm.itemName.trim() || (modalForm.paragraph.trim().substring(0, 30) + (modalForm.paragraph.trim().length > 30 ? '...' : '')),
+                                    name: modalForm.itemName.trim(),
+                                    paragraph: modalForm.paragraph,
+                                  }
+                                : {
+                                    ...item,
+                                    label: modalForm.itemName.trim(),
+                                    name: modalForm.itemName.trim(),
+                                    subtitle: modalForm.subtitle.trim(),
+                                    location: modalForm.location.trim(),
+                                    dates: modalForm.dates.trim(),
+                                    details: splitLines(modalForm.details),
+                                  }
+                          : item,
+                      ),
+                    }
+                  : section,
+              ),
+            )
+          }
         }
       }
     }

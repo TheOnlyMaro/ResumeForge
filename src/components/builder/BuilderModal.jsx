@@ -171,12 +171,14 @@ function BuilderModal({
                   Section type
                   <select
                     value={modalForm.sectionType || 'custom'}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      const nextType = event.target.value
                       setModalForm((prev) => ({
                         ...prev,
-                        sectionType: event.target.value,
+                        sectionType: nextType,
+                        indented: nextType === 'paragraph' ? true : prev.indented,
                       }))
-                    }
+                    }}
                     className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100 cursor-pointer"
                   >
                     <option value="custom">Custom / Bulleted List (Default)</option>
@@ -431,7 +433,7 @@ function BuilderModal({
               )}
               {modalState.mode === 'edit' && (
                 <label className="text-sm text-slate-300">
-                  Section
+                  Move to Section
                   <select
                     value={modalForm.sectionId}
                     onChange={(event) => {
