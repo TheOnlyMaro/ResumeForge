@@ -1311,6 +1311,51 @@ function Builder({ onNavigate }) {
     )
   }
 
+  const removeLibrarySection = (sectionTitle) => {
+    showDialog({
+      type: 'confirm',
+      title: 'Delete Master CV Section',
+      message: `Are you sure you want to delete the Master CV section "${sectionTitle}" and all its library items? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      onConfirm: () => {
+        setLibrarySections((sections) => {
+          const updated = sections.filter((s) => s !== sectionTitle)
+          setLibraryActiveSection((current) => {
+            if (current === sectionTitle) {
+              return updated[0] ?? ''
+            }
+            return current
+          })
+          return updated
+        })
+        setLibraryItems((items) => {
+          const copy = { ...items }
+          delete copy[sectionTitle]
+          return copy
+        })
+      },
+    })
+  }
+
+  const removeLibraryItem = (sectionTitle, itemId) => {
+    const activeItems = libraryItems[sectionTitle] ?? []
+    const item = activeItems.find((i) => i.id === itemId)
+    const itemLabel = item?.label || item?.name || 'this item'
+
+    showDialog({
+      type: 'confirm',
+      title: 'Delete Master CV Item',
+      message: `Are you sure you want to delete "${itemLabel}" from the Master CV library? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      onConfirm: () => {
+        setLibraryItems((items) => ({
+          ...items,
+          [sectionTitle]: (items[sectionTitle] ?? []).filter((i) => i.id !== itemId),
+        }))
+      },
+    })
+  }
+
   const openAddSection = (target = 'resume') => {
     setModalForm({
       title: '',
@@ -1382,9 +1427,19 @@ function Builder({ onNavigate }) {
     })
   }
 
-  const openEditItem = (sectionId, itemId) => {
-    const section = resumeSections.find((item) => item.id === sectionId)
-    const item = section?.items.find((entry) => entry.id === itemId)
+  const openEditItem = (sectionId, itemId, target = 'resume') => {
+    let item
+    let itemType
+    if (target === 'library') {
+      const activeItems = libraryItems[sectionId] ?? []
+      item = activeItems.find((entry) => entry.id === itemId)
+      itemType = item?.type ?? inferKindFromTitle(sectionId)
+    } else {
+      const section = resumeSections.find((item) => item.id === sectionId)
+      item = section?.items.find((entry) => entry.id === itemId)
+      itemType = item?.type ?? section?.kind ?? 'custom'
+    }
+
     setModalForm({
       title: '',
       itemName: item?.name ?? item?.label ?? '',
@@ -1410,17 +1465,24 @@ function Builder({ onNavigate }) {
       open: true,
       mode: 'edit',
       type: 'item',
-      target: 'resume',
-      itemType: item?.type ?? section?.kind ?? 'custom',
+      target,
+      itemType,
       sectionId,
       itemId,
     })
   }
 
-  const openEditSection = (sectionId) => {
-    const section = resumeSections.find((item) => item.id === sectionId)
+  const openEditSection = (sectionId, target = 'resume') => {
+    let title = ''
+    if (target === 'library') {
+      title = sectionId
+    } else {
+      const section = resumeSections.find((item) => item.id === sectionId)
+      title = section?.title ?? ''
+    }
+
     setModalForm({
-      title: section?.title ?? '',
+      title,
       itemName: '',
       sectionId: sectionId ?? '',
       name: '',
@@ -1444,7 +1506,7 @@ function Builder({ onNavigate }) {
       open: true,
       mode: 'edit',
       type: 'section',
-      target: 'resume',
+      target,
       itemType: 'custom',
       sectionId,
       itemId: null,
@@ -1524,6 +1586,24 @@ function Builder({ onNavigate }) {
             [modalForm.title.trim()]: [],
           }))
         }
+        if (modalState.mode === 'edit' && modalForm.title.trim()) {
+          const oldTitle = modalState.sectionId
+          const newTitle = modalForm.title.trim()
+          if (oldTitle !== newTitle) {
+            setLibrarySections((sections) =>
+              sections.map((s) => (s === oldTitle ? newTitle : s))
+            )
+            setLibraryItems((items) => {
+              const copy = { ...items }
+              copy[newTitle] = copy[oldTitle] ?? []
+              delete copy[oldTitle]
+              return copy
+            })
+            if (libraryActiveSection === oldTitle) {
+              setLibraryActiveSection(newTitle)
+            }
+          }
+        }
       } else {
         if (modalState.mode === 'add' && modalForm.title.trim()) {
           const newId = generateId('section')
@@ -1553,13 +1633,19 @@ function Builder({ onNavigate }) {
             : modalState.itemType === 'language'
               ? modalForm.languages.trim()
               : modalForm.itemName.trim()
-        if (modalState.mode === 'add' && hasRequiredField) {
-          const targetSection =
-            modalForm.sectionId || libraryActiveSection || librarySections[0]
-          if (!targetSection) {
-            closeModal()
-            return
-          }
+        if (!hasRequiredField) {
+          closeModal()
+          return
+        }
+
+        const targetSection =
+          modalState.sectionId || modalForm.sectionId || libraryActiveSection || librarySections[0]
+        if (!targetSection) {
+          closeModal()
+          return
+        }
+
+        if (modalState.mode === 'add') {
           const newItemBase = {
             id: generateId('lib-item'),
             type: modalState.itemType,
@@ -1595,6 +1681,42 @@ function Builder({ onNavigate }) {
           setLibraryItems((items) => ({
             ...items,
             [targetSection]: [...(items[targetSection] ?? []), newItem],
+          }))
+        }
+
+        if (modalState.mode === 'edit') {
+          setLibraryItems((items) => ({
+            ...items,
+            [targetSection]: (items[targetSection] ?? []).map((item) =>
+              item.id === modalState.itemId
+                ? modalState.itemType === 'education'
+                  ? {
+                      ...item,
+                      label: `${modalForm.degree.trim()} - ${modalForm.school.trim()}`,
+                      degree: modalForm.degree.trim(),
+                      school: modalForm.school.trim(),
+                      location: modalForm.location.trim(),
+                      field: modalForm.field.trim(),
+                      dates: modalForm.dates.trim(),
+                      bullets: splitLines(modalForm.bullets),
+                    }
+                  : modalState.itemType === 'language'
+                    ? {
+                        ...item,
+                        label: 'Languages',
+                        languages: splitList(modalForm.languages),
+                      }
+                    : {
+                        ...item,
+                        label: modalForm.itemName.trim(),
+                        name: modalForm.itemName.trim(),
+                        subtitle: modalForm.subtitle.trim(),
+                        location: modalForm.location.trim(),
+                        dates: modalForm.dates.trim(),
+                        details: splitLines(modalForm.details),
+                      }
+                : item
+            ),
           }))
         }
       } else {
@@ -2342,6 +2464,10 @@ function Builder({ onNavigate }) {
               onSelectSection={setLibraryActiveSection}
               onAddSection={openAddSection}
               onAddItem={openAddItem}
+              onEditSection={(sectionTitle) => openEditSection(sectionTitle, 'library')}
+              onRemoveSection={removeLibrarySection}
+              onEditItem={(sectionTitle, itemId) => openEditItem(sectionTitle, itemId, 'library')}
+              onRemoveItem={removeLibraryItem}
             />
             <LivePdfPanel resume={compiledResume} masterResume={masterResume} />
             <ResumePanel

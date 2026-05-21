@@ -8,6 +8,10 @@ function LibraryPanel({
   onSelectSection,
   onAddSection,
   onAddItem,
+  onEditSection,
+  onRemoveSection,
+  onEditItem,
+  onRemoveItem,
 }) {
   // IDs used by the section-level SortableContext (must be strings)
   const sectionSortIds = librarySections.map((s) => `lib-section-sort-${s}`)
@@ -55,6 +59,8 @@ function LibraryPanel({
                   items={libraryItems[item] ?? []}
                   active={libraryActiveSection === item}
                   onSelect={() => onSelectSection(item)}
+                  onEdit={() => onEditSection?.(item)}
+                  onRemove={() => onRemoveSection?.(item)}
                 />
               ))}
             </SortableContext>
@@ -88,7 +94,12 @@ function LibraryPanel({
               strategy={verticalListSortingStrategy}
             >
               {activeItems.map((item) => (
-                <LibrarySortableItem key={item.id} item={item} />
+                <LibrarySortableItem
+                  key={item.id}
+                  item={item}
+                  onEdit={() => onEditItem?.(libraryActiveSection, item.id)}
+                  onRemove={() => onRemoveItem?.(libraryActiveSection, item.id)}
+                />
               ))}
             </SortableContext>
           </div>
