@@ -301,6 +301,7 @@ function Builder({ onNavigate }) {
   const [activeResumeId, setActiveResumeId] = useState('')
   const [masterCvs, setMasterCvs] = useState([])
   const [activeMasterCvId, setActiveMasterCvId] = useState('')
+  const [librarySectionKinds, setLibrarySectionKinds] = useState({})
   const [autosaveEnabled, setAutosaveEnabled] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   // Tracks which file IDs have unsaved in-memory edits
@@ -322,6 +323,7 @@ function Builder({ onNavigate }) {
     activeCvId = activeMasterCvId,
     activeLibrarySections = librarySections,
     activeLibraryItems = libraryItems,
+    activeLibrarySectionKinds = librarySectionKinds,
     autosave = autosaveEnabled,
   } = {}) => {
     const updatedResumes = resumesList.map((r) => {
@@ -342,6 +344,7 @@ function Builder({ onNavigate }) {
           ...cv,
           librarySections: activeLibrarySections,
           libraryItems: activeLibraryItems,
+          librarySectionKinds: activeLibrarySectionKinds,
           updatedAt: Date.now(),
         }
       }
@@ -442,6 +445,7 @@ function Builder({ onNavigate }) {
           if (activeCv) {
             setLibrarySections(activeCv.librarySections || [])
             setLibraryItems(activeCv.libraryItems || {})
+            setLibrarySectionKinds(activeCv.librarySectionKinds || {})
             if (activeCv.librarySections && activeCv.librarySections.length > 0) {
               setLibraryActiveSection(activeCv.librarySections[0])
             }
@@ -454,11 +458,21 @@ function Builder({ onNavigate }) {
             updatedAt: Date.now(),
             librarySections: DEFAULT_LIBRARY_SECTIONS,
             libraryItems: DEFAULT_LIBRARY_ITEMS,
+            librarySectionKinds: {
+              Experience: 'custom',
+              Projects: 'custom',
+              Skills: 'custom',
+            },
           }
           setMasterCvs([defaultCv])
           setActiveMasterCvId('cv-1')
           setLibrarySections(DEFAULT_LIBRARY_SECTIONS)
           setLibraryItems(DEFAULT_LIBRARY_ITEMS)
+          setLibrarySectionKinds({
+            Experience: 'custom',
+            Projects: 'custom',
+            Skills: 'custom',
+          })
           setLibraryActiveSection(DEFAULT_LIBRARY_SECTIONS[0])
         }
 
@@ -536,7 +550,7 @@ function Builder({ onNavigate }) {
     setDirtyCvIds((prev) =>
       prev.includes(activeMasterCvId) ? prev : [...prev, activeMasterCvId]
     )
-  }, [activeMasterCvId, librarySections, libraryItems]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeMasterCvId, librarySections, libraryItems, librarySectionKinds]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Warn user before closing / refreshing if any file has unsaved changes
   useEffect(() => {
@@ -564,6 +578,7 @@ function Builder({ onNavigate }) {
         activeCvId: activeMasterCvId,
         activeLibrarySections: librarySections,
         activeLibraryItems: libraryItems,
+        activeLibrarySectionKinds: librarySectionKinds,
         autosave: autosaveEnabled,
       })
     }
@@ -574,6 +589,7 @@ function Builder({ onNavigate }) {
     titleData,
     librarySections,
     libraryItems,
+    librarySectionKinds,
     resumes,
     masterCvs,
     activeResumeId,
@@ -621,12 +637,18 @@ function Builder({ onNavigate }) {
     // Capture current in-flight data before switching
     const outgoingLibrarySections = librarySections
     const outgoingLibraryItems = libraryItems
+    const outgoingLibrarySectionKinds = librarySectionKinds
 
     setMasterCvs((prevCvs) => {
       // Flush outgoing CV's edits into the in-memory array only — NOT localStorage
       const updated = prevCvs.map((cv) => {
         if (cv.id === activeMasterCvId) {
-          return { ...cv, librarySections: outgoingLibrarySections, libraryItems: outgoingLibraryItems }
+          return {
+            ...cv,
+            librarySections: outgoingLibrarySections,
+            libraryItems: outgoingLibraryItems,
+            librarySectionKinds: outgoingLibrarySectionKinds,
+          }
           // Note: no updatedAt — only real saves move the timestamp
         }
         return cv
@@ -636,9 +658,11 @@ function Builder({ onNavigate }) {
       const targetCv = updated.find((cv) => cv.id === newId)
       const incomingLibSections = targetCv?.librarySections ?? []
       const incomingLibItems = targetCv?.libraryItems ?? {}
+      const incomingLibSectionKinds = targetCv?.librarySectionKinds ?? {}
 
       setLibrarySections(incomingLibSections)
       setLibraryItems(incomingLibItems)
+      setLibrarySectionKinds(incomingLibSectionKinds)
       if (incomingLibSections.length > 0) {
         setLibraryActiveSection(incomingLibSections[0])
       }
@@ -945,11 +969,17 @@ function Builder({ onNavigate }) {
         Projects: [],
         Skills: [],
       },
+      librarySectionKinds: {
+        Experience: 'custom',
+        Projects: 'custom',
+        Skills: 'custom',
+      },
     }
     setMasterCvs((prev) => {
       const updated = [...prev, newCv]
       setLibrarySections(newCv.librarySections)
       setLibraryItems(newCv.libraryItems)
+      setLibrarySectionKinds(newCv.librarySectionKinds)
       setLibraryActiveSection('Experience')
       setActiveMasterCvId(newCv.id)
       saveWorkspace({
@@ -961,6 +991,7 @@ function Builder({ onNavigate }) {
         activeCvId: newCv.id,
         activeLibrarySections: newCv.librarySections,
         activeLibraryItems: newCv.libraryItems,
+        activeLibrarySectionKinds: newCv.librarySectionKinds,
         autosave: autosaveEnabled,
       })
       return updated
@@ -1073,6 +1104,14 @@ function Builder({ onNavigate }) {
                 { label: `Overwrite “${activeCvName}”`, description: 'Replaces your currently active Master CV', value: 'overwrite' },
               ],
               onChoice: (choice) => {
+                const incomingSectionKinds = parsed.librarySectionKinds || {}
+                parsed.librarySections.forEach((s) => {
+                  if (!incomingSectionKinds[s]) {
+                    const firstItem = parsed.libraryItems[s]?.[0]
+                    incomingSectionKinds[s] = firstItem?.type ?? inferKindFromTitle(s)
+                  }
+                })
+
                 if (choice === 'new') {
                   const newCv = {
                     id: generateId('cv'),
@@ -1081,24 +1120,27 @@ function Builder({ onNavigate }) {
                     updatedAt: Date.now(),
                     librarySections: parsed.librarySections,
                     libraryItems: parsed.libraryItems,
+                    librarySectionKinds: incomingSectionKinds,
                   }
                   setMasterCvs((prev) => {
                     const updated = [...prev, newCv]
                     setLibrarySections(newCv.librarySections)
                     setLibraryItems(newCv.libraryItems)
+                    setLibrarySectionKinds(newCv.librarySectionKinds)
                     if (newCv.librarySections?.length > 0) setLibraryActiveSection(newCv.librarySections[0])
                     setActiveMasterCvId(newCv.id)
-                    saveWorkspace({ resumesList: resumes, activeId: activeResumeId, activeSections: resumeSections, activeTitleData: titleData, masterCvsList: updated, activeCvId: newCv.id, activeLibrarySections: newCv.librarySections, activeLibraryItems: newCv.libraryItems, autosave: autosaveEnabled })
+                    saveWorkspace({ resumesList: resumes, activeId: activeResumeId, activeSections: resumeSections, activeTitleData: titleData, masterCvsList: updated, activeCvId: newCv.id, activeLibrarySections: newCv.librarySections, activeLibraryItems: newCv.libraryItems, activeLibrarySectionKinds: newCv.librarySectionKinds, autosave: autosaveEnabled })
                     return updated
                   })
                   showDismissNotice(`Imported new Master CV “${newCv.name}”!`)
                 } else {
                   setLibrarySections(parsed.librarySections)
                   setLibraryItems(parsed.libraryItems)
+                  setLibrarySectionKinds(incomingSectionKinds)
                   if (parsed.librarySections?.length > 0) setLibraryActiveSection(parsed.librarySections[0])
                   setMasterCvs((prev) => {
-                    const updated = prev.map((cv) => cv.id === activeMasterCvId ? { ...cv, name: parsed.name || cv.name, updatedAt: Date.now(), librarySections: parsed.librarySections, libraryItems: parsed.libraryItems } : cv)
-                    saveWorkspace({ resumesList: resumes, activeId: activeResumeId, activeSections: resumeSections, activeTitleData: titleData, masterCvsList: updated, activeCvId: activeMasterCvId, activeLibrarySections: parsed.librarySections, activeLibraryItems: parsed.libraryItems, autosave: autosaveEnabled })
+                    const updated = prev.map((cv) => cv.id === activeMasterCvId ? { ...cv, name: parsed.name || cv.name, updatedAt: Date.now(), librarySections: parsed.librarySections, libraryItems: parsed.libraryItems, librarySectionKinds: incomingSectionKinds } : cv)
+                    saveWorkspace({ resumesList: resumes, activeId: activeResumeId, activeSections: resumeSections, activeTitleData: titleData, masterCvsList: updated, activeCvId: activeMasterCvId, activeLibrarySections: parsed.librarySections, activeLibraryItems: parsed.libraryItems, activeLibrarySectionKinds: incomingSectionKinds, autosave: autosaveEnabled })
                     return updated
                   })
                   showDismissNotice('Successfully overwrote active Master CV!')
@@ -1139,7 +1181,7 @@ function Builder({ onNavigate }) {
           filename = `${activeRes.name || 'resume'}.json`
         } else {
           if (!activeCv) { showDialog({ type: 'alert', variant: 'error', title: 'Export Error', message: 'No active Master CV found to export.' }); return }
-          dataToExport = { fileType: 'resume_forge_master_cv', version: 1, name: activeCv.name, createdAt: activeCv.createdAt, updatedAt: Date.now(), librarySections, libraryItems }
+          dataToExport = { fileType: 'resume_forge_master_cv', version: 1, name: activeCv.name, createdAt: activeCv.createdAt, updatedAt: Date.now(), librarySections, libraryItems, librarySectionKinds }
           filename = `${activeCv.name || 'master_cv'}.json`
         }
         const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' })
@@ -1173,6 +1215,7 @@ function Builder({ onNavigate }) {
     details: '',
     languages: '',
     sectionType: 'custom',
+    paragraph: '',
   })
 
   // Only call this when CREATING a new section from a user-typed title.
@@ -1208,7 +1251,8 @@ function Builder({ onNavigate }) {
     if (targetKind === 'language') {
       return itemType === 'language'
     }
-    return itemType === 'custom'
+    const allowedKinds = ['custom', 'list', 'paragraph']
+    return allowedKinds.includes(targetKind) && allowedKinds.includes(itemType)
   }
 
   const buildResumeItemFromLibrary = (item, sectionKind) => {
@@ -1240,21 +1284,43 @@ function Builder({ onNavigate }) {
       }
     }
 
-    // Custom kind
+    if (sectionKind === 'paragraph') {
+      let paragraphContent = ''
+      if (item.paragraph) {
+        paragraphContent = item.paragraph
+      } else if (item.details) {
+        paragraphContent = item.details.join('\n')
+      } else if (item.bullets) {
+        paragraphContent = item.bullets.join('\n')
+      }
+      return {
+        ...common,
+        type: 'paragraph',
+        label: item.label || item.name || 'New Paragraph',
+        name: item.name || item.label || '',
+        paragraph: paragraphContent,
+      }
+    }
+
+    // Custom or list kind
     const labelCandidate =
       item.label ||
       item.name ||
       `${item.degree ?? ''}${item.school ? ` - ${item.school}` : ''}`.trim() ||
       'New Item'
 
-    const detailCandidates =
+    let detailCandidates =
       item.details ??
       item.bullets ??
       (item.languages ? [...item.languages] : [])
 
+    if (item.paragraph) {
+      detailCandidates = [item.paragraph]
+    }
+
     return {
       ...common,
-      type: 'custom',
+      type: sectionKind, // 'custom' or 'list'
       label: labelCandidate,
       name: item.name ?? item.label ?? labelCandidate,
       subtitle: item.subtitle ?? item.field ?? '',
@@ -1379,6 +1445,7 @@ function Builder({ onNavigate }) {
       details: '',
       languages: '',
       sectionType: 'custom',
+      paragraph: '',
     })
     setModalState({
       open: true,
@@ -1395,7 +1462,7 @@ function Builder({ onNavigate }) {
     const resolvedSection = resumeSections.find((section) => section.id === sectionId)
     const itemType =
       target === 'library'
-        ? inferKindFromTitle(libraryActiveSection)
+        ? librarySectionKinds[libraryActiveSection] || inferKindFromTitle(libraryActiveSection)
         : resolvedSection?.kind ?? 'custom'
     setModalForm({
       title: '',
@@ -1417,6 +1484,7 @@ function Builder({ onNavigate }) {
       bullets: '',
       details: '',
       languages: '',
+      paragraph: '',
     })
     setModalState({
       open: true,
@@ -1435,7 +1503,7 @@ function Builder({ onNavigate }) {
     if (target === 'library') {
       const activeItems = libraryItems[sectionId] ?? []
       item = activeItems.find((entry) => entry.id === itemId)
-      itemType = item?.type ?? inferKindFromTitle(sectionId)
+      itemType = item?.type ?? librarySectionKinds[sectionId] ?? inferKindFromTitle(sectionId)
     } else {
       const section = resumeSections.find((item) => item.id === sectionId)
       item = section?.items.find((entry) => entry.id === itemId)
@@ -1462,6 +1530,7 @@ function Builder({ onNavigate }) {
       bullets: (item?.bullets ?? []).join('\n'),
       details: (item?.details ?? []).join('\n'),
       languages: (item?.languages ?? []).join('\n'),
+      paragraph: item?.paragraph ?? '',
     })
     setModalState({
       open: true,
@@ -1579,13 +1648,19 @@ function Builder({ onNavigate }) {
     if (modalState.type === 'section') {
       if (modalState.target === 'library') {
         if (modalState.mode === 'add' && modalForm.title.trim()) {
+          const sectionTitle = modalForm.title.trim()
+          const sectionKind = modalForm.sectionType || 'custom'
           setLibrarySections((sections) => [
             ...sections,
-            modalForm.title.trim(),
+            sectionTitle,
           ])
           setLibraryItems((items) => ({
             ...items,
-            [modalForm.title.trim()]: [],
+            [sectionTitle]: [],
+          }))
+          setLibrarySectionKinds((kinds) => ({
+            ...kinds,
+            [sectionTitle]: sectionKind,
           }))
         }
         if (modalState.mode === 'edit' && modalForm.title.trim()) {
@@ -1601,6 +1676,12 @@ function Builder({ onNavigate }) {
               delete copy[oldTitle]
               return copy
             })
+            setLibrarySectionKinds((kinds) => {
+              const copy = { ...kinds }
+              copy[newTitle] = copy[oldTitle] ?? 'custom'
+              delete copy[oldTitle]
+              return copy
+            })
             if (libraryActiveSection === oldTitle) {
               setLibraryActiveSection(newTitle)
             }
@@ -1609,7 +1690,7 @@ function Builder({ onNavigate }) {
       } else {
         if (modalState.mode === 'add' && modalForm.title.trim()) {
           const newId = generateId('section')
-          const newKind = inferKindFromTitle(modalForm.title.trim())
+          const newKind = modalForm.sectionType || 'custom'
           setResumeSections((sections) => [
             ...sections,
             { id: newId, title: modalForm.title.trim(), kind: newKind, items: [] },
@@ -1634,7 +1715,9 @@ function Builder({ onNavigate }) {
             ? modalForm.degree.trim() || modalForm.school.trim()
             : modalState.itemType === 'language'
               ? modalForm.languages.trim()
-              : modalForm.itemName.trim()
+              : modalState.itemType === 'paragraph'
+                ? modalForm.paragraph.trim()
+                : modalForm.itemName.trim()
         if (!hasRequiredField) {
           closeModal()
           return
@@ -1671,15 +1754,22 @@ function Builder({ onNavigate }) {
                     label: 'Languages',
                     languages: splitList(modalForm.languages),
                   }
-                : {
-                    ...newItemBase,
-                    label: modalForm.itemName.trim(),
-                    name: modalForm.itemName.trim(),
-                    subtitle: modalForm.subtitle.trim(),
-                    location: modalForm.location.trim(),
-                    dates: modalForm.dates.trim(),
-                    details: splitLines(modalForm.details),
-                  }
+                : modalState.itemType === 'paragraph'
+                  ? {
+                      ...newItemBase,
+                      label: modalForm.itemName.trim() || (modalForm.paragraph.trim().substring(0, 30) + (modalForm.paragraph.trim().length > 30 ? '...' : '')),
+                      name: modalForm.itemName.trim(),
+                      paragraph: modalForm.paragraph,
+                    }
+                  : {
+                      ...newItemBase,
+                      label: modalForm.itemName.trim(),
+                      name: modalForm.itemName.trim(),
+                      subtitle: modalForm.subtitle.trim(),
+                      location: modalForm.location.trim(),
+                      dates: modalForm.dates.trim(),
+                      details: splitLines(modalForm.details),
+                    }
           setLibraryItems((items) => ({
             ...items,
             [targetSection]: [...(items[targetSection] ?? []), newItem],
@@ -1708,15 +1798,22 @@ function Builder({ onNavigate }) {
                         label: 'Languages',
                         languages: splitList(modalForm.languages),
                       }
-                    : {
-                        ...item,
-                        label: modalForm.itemName.trim(),
-                        name: modalForm.itemName.trim(),
-                        subtitle: modalForm.subtitle.trim(),
-                        location: modalForm.location.trim(),
-                        dates: modalForm.dates.trim(),
-                        details: splitLines(modalForm.details),
-                      }
+                    : modalState.itemType === 'paragraph'
+                      ? {
+                          ...item,
+                          label: modalForm.itemName.trim() || (modalForm.paragraph.trim().substring(0, 30) + (modalForm.paragraph.trim().length > 30 ? '...' : '')),
+                          name: modalForm.itemName.trim(),
+                          paragraph: modalForm.paragraph,
+                        }
+                      : {
+                          ...item,
+                          label: modalForm.itemName.trim(),
+                          name: modalForm.itemName.trim(),
+                          subtitle: modalForm.subtitle.trim(),
+                          location: modalForm.location.trim(),
+                          dates: modalForm.dates.trim(),
+                          details: splitLines(modalForm.details),
+                        }
                 : item
             ),
           }))
@@ -1729,7 +1826,9 @@ function Builder({ onNavigate }) {
             ? modalForm.degree.trim() || modalForm.school.trim()
             : modalState.itemType === 'language'
               ? modalForm.languages.trim()
-              : modalForm.itemName.trim()
+              : modalState.itemType === 'paragraph'
+                ? modalForm.paragraph.trim()
+                : modalForm.itemName.trim()
         if (!targetSectionId || !hasRequiredField) {
           closeModal()
           return
@@ -1765,17 +1864,26 @@ function Builder({ onNavigate }) {
                               languages: splitList(modalForm.languages),
                               enabled: true,
                             }
-                          : {
-                              id: newId,
-                              type: 'custom',
-                              label: modalForm.itemName.trim(),
-                              name: modalForm.itemName.trim(),
-                              subtitle: modalForm.subtitle.trim(),
-                              location: modalForm.location.trim(),
-                              dates: modalForm.dates.trim(),
-                              details: splitLines(modalForm.details),
-                              enabled: true,
-                            },
+                          : modalState.itemType === 'paragraph'
+                            ? {
+                                id: newId,
+                                type: 'paragraph',
+                                label: modalForm.itemName.trim() || (modalForm.paragraph.trim().substring(0, 30) + (modalForm.paragraph.trim().length > 30 ? '...' : '')),
+                                name: modalForm.itemName.trim(),
+                                paragraph: modalForm.paragraph,
+                                enabled: true,
+                              }
+                            : {
+                                id: newId,
+                                type: modalState.itemType,
+                                label: modalForm.itemName.trim(),
+                                name: modalForm.itemName.trim(),
+                                subtitle: modalForm.subtitle.trim(),
+                                location: modalForm.location.trim(),
+                                dates: modalForm.dates.trim(),
+                                details: splitLines(modalForm.details),
+                                enabled: true,
+                              },
                     ],
                   }
                 : section,
@@ -1808,15 +1916,22 @@ function Builder({ onNavigate }) {
                                 label: 'Languages',
                                 languages: splitList(modalForm.languages),
                               }
-                            : {
-                                ...item,
-                                label: modalForm.itemName.trim(),
-                                name: modalForm.itemName.trim(),
-                                subtitle: modalForm.subtitle.trim(),
-                                location: modalForm.location.trim(),
-                                dates: modalForm.dates.trim(),
-                                details: splitLines(modalForm.details),
-                              }
+                            : modalState.itemType === 'paragraph'
+                              ? {
+                                  ...item,
+                                  label: modalForm.itemName.trim() || (modalForm.paragraph.trim().substring(0, 30) + (modalForm.paragraph.trim().length > 30 ? '...' : '')),
+                                  name: modalForm.itemName.trim(),
+                                  paragraph: modalForm.paragraph,
+                                }
+                              : {
+                                  ...item,
+                                  label: modalForm.itemName.trim(),
+                                  name: modalForm.itemName.trim(),
+                                  subtitle: modalForm.subtitle.trim(),
+                                  location: modalForm.location.trim(),
+                                  dates: modalForm.dates.trim(),
+                                  details: splitLines(modalForm.details),
+                                }
                         : item,
                     ),
                   }
@@ -1856,9 +1971,19 @@ function Builder({ onNavigate }) {
             items: enabledItems.flatMap((item) => item.languages || []),
           }
         }
+        if (section.kind === 'paragraph') {
+          return {
+            title: section.title.toUpperCase(),
+            kind: 'paragraph',
+            items: enabledItems.map((item) => ({
+              label: item.label || '',
+              paragraph: item.paragraph || '',
+            })),
+          }
+        }
         return {
           title: section.title.toUpperCase(),
-          kind: 'custom',
+          kind: section.kind || 'custom',
           items: enabledItems.map((item) => ({
             title: item.name || item.label || '',
             location: item.location || '',
@@ -1888,7 +2013,7 @@ function Builder({ onNavigate }) {
           (k) => k.toLowerCase() === sectionName.toLowerCase(),
         )
         const libList = libKey ? libraryItems[libKey] : []
-        const kind = inferKindFromTitle(sectionName)
+        const kind = librarySectionKinds[sectionName] || inferKindFromTitle(sectionName)
 
         if (kind === 'education') {
           return {
@@ -1911,9 +2036,19 @@ function Builder({ onNavigate }) {
             items: libList.flatMap((item) => item.languages || []),
           }
         }
+        if (kind === 'paragraph') {
+          return {
+            title: sectionName.toUpperCase(),
+            kind: 'paragraph',
+            items: libList.map((item) => ({
+              label: item.label || '',
+              paragraph: item.paragraph || '',
+            })),
+          }
+        }
         return {
           title: sectionName.toUpperCase(),
-          kind: 'custom',
+          kind: kind || 'custom',
           items: libList.map((item) => ({
             title: item.title || item.name || item.label || '',
             location: item.location || '',
@@ -2509,6 +2644,7 @@ function Builder({ onNavigate }) {
         setModalState={setModalState}
         resumeSections={resumeSections}
         librarySections={librarySections}
+        librarySectionKinds={librarySectionKinds}
         onSubmit={handleModalSubmit}
         onClose={closeModal}
         onBackdropClose={handleBackdropClose}

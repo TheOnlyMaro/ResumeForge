@@ -5,6 +5,7 @@ function BuilderModal({
   setModalState,
   resumeSections,
   librarySections,
+  librarySectionKinds = {},
   onSubmit,
   onClose,
   onBackdropClose,
@@ -279,7 +280,7 @@ function BuilderModal({
                   </label>
                 </>
               )}
-              {modalState.itemType === 'custom' && (
+              {(modalState.itemType === 'custom' || modalState.itemType === 'list') && (
                 <>
                   <div className="grid gap-4 md:grid-cols-2">
                     <label className="text-sm text-slate-300">
@@ -355,6 +356,40 @@ function BuilderModal({
                   </label>
                 </>
               )}
+              {modalState.itemType === 'paragraph' && (
+                <>
+                  <label className="text-sm text-slate-300">
+                    Paragraph label (optional - for editor organization)
+                    <input
+                      type="text"
+                      value={modalForm.itemName}
+                      onChange={(event) =>
+                        setModalForm((prev) => ({
+                          ...prev,
+                          itemName: event.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                      placeholder="e.g. Summary, Profile, Objectives..."
+                    />
+                  </label>
+                  <label className="text-sm text-slate-300">
+                    Paragraph narrative text
+                    <textarea
+                      rows={6}
+                      value={modalForm.paragraph}
+                      onChange={(event) =>
+                        setModalForm((prev) => ({
+                          ...prev,
+                          paragraph: event.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                      placeholder="Write your plain narrative text here..."
+                    />
+                  </label>
+                </>
+              )}
               {modalState.itemType === 'language' && (
                 <label className="text-sm text-slate-300">
                   Languages (one per line)
@@ -382,15 +417,31 @@ function BuilderModal({
                         ...prev,
                         sectionId: nextSectionId,
                       }))
-                      const nextSection = resumeSections.find(
-                            (section) => section.id === nextSectionId,
-                          )
-                          if (nextSection?.kind) {
-                            setModalState((prev) => ({
-                              ...prev,
-                              itemType: nextSection.kind,
-                            }))
-                          }
+                      
+                      const inferKindFromTitle = (sectionTitle = '') => {
+                        const title = sectionTitle.toLowerCase().trim()
+                        if (title === 'education') return 'education'
+                        if (title === 'languages' || title === 'language') return 'language'
+                        return 'custom'
+                      }
+                      
+                      if (modalState.target === 'library') {
+                        const nextKind = librarySectionKinds[nextSectionId] || inferKindFromTitle(nextSectionId)
+                        setModalState((prev) => ({
+                          ...prev,
+                          itemType: nextKind,
+                        }))
+                      } else {
+                        const nextSection = resumeSections.find(
+                          (section) => section.id === nextSectionId,
+                        )
+                        if (nextSection?.kind) {
+                          setModalState((prev) => ({
+                            ...prev,
+                            itemType: nextSection.kind,
+                          }))
+                        }
+                      }
                     }}
                     className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
                   >

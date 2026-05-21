@@ -286,6 +286,40 @@ export async function generateResumePdfDoc(resume = defaultResume) {
     })
   }
 
+  const drawParagraph = (text) => {
+    const lineHeight = 12
+    doc.setFont('Calibri', 'normal')
+    doc.setFontSize(10)
+    // Split by newlines so we preserve user paragraph breaks and wrap each separately
+    const lines = text.split('\n')
+    lines.forEach((pText) => {
+      const wrappedLines = doc.splitTextToSize(pText.trim(), contentWidth)
+      checkPageBreak(lineHeight * wrappedLines.length)
+      wrappedLines.forEach((line) => {
+        doc.text(line, leftX, y)
+        y += lineHeight
+        checkPageBreak(lineHeight)
+      })
+      // Add a small paragraph gap for subsequent paragraph blocks
+      y += 3
+    })
+  }
+
+  const drawNonBulletedLines = (lines) => {
+    const lineHeight = 12
+    lines.forEach((line) => {
+      doc.setFont('Calibri', 'normal')
+      doc.setFontSize(10)
+      const wrappedLines = doc.splitTextToSize(line, contentWidth)
+      checkPageBreak(lineHeight * wrappedLines.length)
+      wrappedLines.forEach((wrappedLine) => {
+        doc.text(wrappedLine, leftX, y)
+        y += lineHeight
+        checkPageBreak(lineHeight)
+      })
+    })
+  }
+
   // ── Content ───────────────────────────────────────────────────────────────
 
   if (resume.sections?.length) {
@@ -308,6 +342,24 @@ export async function generateResumePdfDoc(resume = defaultResume) {
           doc.setFontSize(10)
           doc.text(section.items.join(' | '), leftX, y)
           y += 12
+        } else if (section.kind === 'paragraph') {
+          drawSectionTitle(section.title)
+          section.items.forEach((item) => {
+            if (item.paragraph) {
+              drawParagraph(item.paragraph)
+            }
+            y += 6
+          })
+        } else if (section.kind === 'list') {
+          drawSectionTitle(section.title)
+          section.items.forEach((item) => {
+            drawLinePair(item.title, item.location, 'bold')
+            drawSubLinePair(item.subtitle, item.dates)
+            if (item.details?.length) {
+              drawNonBulletedLines(item.details)
+            }
+            y += 6
+          })
         } else {
           // Custom section
           drawSectionTitle(section.title)
