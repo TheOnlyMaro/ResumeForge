@@ -187,6 +187,29 @@ function BuilderModal({
                   </select>
                 </label>
               )}
+              {(() => {
+                const sectionBeingEdited = resumeSections.find((s) => s.id === modalState.sectionId);
+                const sectionKind = modalState.mode === 'add' ? (modalForm.sectionType || 'custom') : (sectionBeingEdited?.kind || 'custom');
+                if (sectionKind === 'paragraph') {
+                  return (
+                    <label className="flex items-center gap-3 text-sm text-slate-300 mt-2 cursor-pointer bg-slate-950/40 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition">
+                      <input
+                        type="checkbox"
+                        checked={modalForm.indented || false}
+                        onChange={(event) =>
+                          setModalForm((prev) => ({
+                            ...prev,
+                            indented: event.target.checked,
+                          }))
+                        }
+                        className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-sky-500 focus:ring-sky-500 focus:ring-offset-slate-950 cursor-pointer"
+                      />
+                      <span className="select-none">Indent paragraphs (first line indent)</span>
+                    </label>
+                  );
+                }
+                return null;
+              })()}
             </div>
           ) : (
             <>

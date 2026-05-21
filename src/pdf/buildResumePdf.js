@@ -190,9 +190,174 @@ export async function generateResumePdfDoc(resume = defaultResume) {
 
   // ── Draw helpers ──────────────────────────────────────────────────────────
 
+  const parseFormatting = (text) => {
+    if (typeof text !== 'string') {
+      text = String(text || '')
+    }
+    const segments = []
+    let currentBold = false
+    let currentItalic = false
+    let currentUnderline = false
+    
+    let i = 0
+    let lastIndex = 0
+    
+    while (i < text.length) {
+      if (text.startsWith('__', i)) {
+        if (i > lastIndex) {
+          segments.push({
+            text: text.substring(lastIndex, i),
+            bold: currentBold,
+            italic: currentItalic,
+            underline: currentUnderline
+          })
+        }
+        currentUnderline = !currentUnderline
+        i += 2
+        lastIndex = i
+      } else if (text[i] === '*') {
+        if (i > lastIndex) {
+          segments.push({
+            text: text.substring(lastIndex, i),
+            bold: currentBold,
+            italic: currentItalic,
+            underline: currentUnderline
+          })
+        }
+        currentBold = !currentBold
+        i += 1
+        lastIndex = i
+      } else if (text[i] === '_') {
+        if (i > lastIndex) {
+          segments.push({
+            text: text.substring(lastIndex, i),
+            bold: currentBold,
+            italic: currentItalic,
+            underline: currentUnderline
+          })
+        }
+        currentItalic = !currentItalic
+        i += 1
+        lastIndex = i
+      } else {
+        i += 1
+      }
+    }
+    
+    if (lastIndex < text.length) {
+      segments.push({
+        text: text.substring(lastIndex),
+        bold: currentBold,
+        italic: currentItalic,
+        underline: currentUnderline
+      })
+    }
+    
+    return segments
+  }
+
+  const wrapSegments = (segments, maxWidth) => {
+    const lines = []
+    let currentLine = []
+    let currentLineWidth = 0
+    const safeMaxWidth = Math.max(10, maxWidth || 10)
+    
+    segments.forEach((seg) => {
+      // Split into words and spaces while preserving them
+      const words = seg.text.split(/(\s+)/)
+      
+      words.forEach((word) => {
+        if (!word) return
+        
+        let style = 'normal'
+        if (seg.bold && seg.italic) style = 'bolditalic'
+        else if (seg.bold) style = 'bold'
+        else if (seg.italic) style = 'italic'
+        
+        doc.setFont('Calibri', style)
+        doc.setFontSize(10)
+        const wordWidth = doc.getTextWidth(word)
+        
+        if (currentLineWidth + wordWidth > safeMaxWidth) {
+          if (currentLine.length > 0) {
+            lines.push(currentLine)
+          }
+          currentLine = []
+          currentLineWidth = 0
+          
+          if (/^\s+$/.test(word)) {
+            return
+          }
+        }
+        
+        currentLine.push({
+          text: word,
+          bold: seg.bold,
+          italic: seg.italic,
+          underline: seg.underline
+        })
+        currentLineWidth += wordWidth
+      })
+    })
+    
+    if (currentLine.length > 0) {
+      lines.push(currentLine)
+    }
+    
+    return lines
+  }
+
+  const drawFormattedText = (text, startX, maxWidth) => {
+    const safeText = typeof text === 'string' ? text : String(text || '')
+    if (!safeText) return
+    const lineHeight = 12
+    const segments = parseFormatting(safeText)
+    const wrappedLines = wrapSegments(segments, maxWidth)
+    
+    checkPageBreak(lineHeight * wrappedLines.length)
+    
+    wrappedLines.forEach((line) => {
+      let currentX = startX
+      
+      line.forEach((seg) => {
+        let style = 'normal'
+        if (seg.bold && seg.italic) style = 'bolditalic'
+        else if (seg.bold) style = 'bold'
+        else if (seg.italic) style = 'italic'
+        
+        doc.setFont('Calibri', style)
+        doc.setFontSize(10)
+        doc.text(seg.text, currentX, y)
+        
+        const segWidth = doc.getTextWidth(seg.text)
+        
+        if (seg.underline) {
+          doc.setLineWidth(0.6)
+          doc.line(currentX, y + 1.5, currentX + segWidth, y + 1.5)
+        }
+        
+        currentX += segWidth
+      })
+      
+      y += lineHeight
+      checkPageBreak(lineHeight)
+    })
+  }
+
+  const formatBulletText = (bullet) => {
+    const safeBullet = typeof bullet === 'string' ? bullet : String(bullet || '')
+    const [label, rest] = safeBullet.split(/:(.+)/)
+    if (rest) {
+      const trimmedLabel = label.trim()
+      if (!trimmedLabel.startsWith('*') && !trimmedLabel.startsWith('_')) {
+        return `*${trimmedLabel}:* ${rest.trim()}`
+      }
+    }
+    return safeBullet
+  }
+
   const drawSectionTitle = (title) => {
     // Keep section title + at least one line of content on the same page.
-    // Minimum block: title line (12) + rule gap (12) + one body line (12) = 36pt
     checkPageBreak(36)
     doc.setFont('Calibri', 'bold')
     doc.setFontSize(12)
@@ -222,101 +387,76 @@ export async function generateResumePdfDoc(resume = defaultResume) {
     y += 11
   }
 
+  const drawItemHeader = (title = '', subtitle = '', location = '', dates = '') => {
+    const t = (title || '').trim()
+    const s = (subtitle || '').trim()
+    const loc = (location || '').trim()
+    const d = (dates || '').trim()
+
+    if (!t && !s) {
+      return
+    }
+
+    if (t && s) {
+      drawLinePair(t, loc, 'bold')
+      drawSubLinePair(s, d)
+    } else if (t) {
+      let rightText = ''
+      if (loc && d) {
+        rightText = `${loc}  |  ${d}`
+      } else {
+        rightText = loc || d
+      }
+      drawLinePair(t, rightText, 'bold')
+    } else if (s) {
+      let rightText = ''
+      if (loc && d) {
+        rightText = `${loc}  |  ${d}`
+      } else {
+        rightText = loc || d
+      }
+      drawLinePair(s, rightText, 'bold')
+    }
+  }
+
   const drawBullets = (bullets) => {
+    if (!Array.isArray(bullets)) return
     const bulletIndent = 18
     const bulletRadius = 1.6
-    const lineHeight = 12
     const wrapWidth = contentWidth - bulletIndent
 
     bullets.forEach((bullet) => {
-      const [label, rest] = bullet.split(/:(.+)/)
-
-      if (rest) {
-        // Bold-label + normal-rest style bullet (e.g. "Skill: description")
-        doc.setFont('Calibri', 'bold')
-        doc.setFontSize(10)
-        const labelText = `${label.trim()}:`
-        const labelWidth = doc.getTextWidth(labelText)
-        const restText = rest.trim()
-
-        // Wrap the rest portion if it overflows the line
-        doc.setFont('Calibri', 'normal')
-        const restLines = doc.splitTextToSize(restText, wrapWidth - labelWidth - 4)
-        checkPageBreak(lineHeight * restLines.length)
-
-        doc.setDrawColor(0, 0, 0)
-        doc.setFillColor(0, 0, 0)
-        doc.circle(leftX + 6, y - 3, bulletRadius, 'F')
-
-        doc.setFont('Calibri', 'bold')
-        doc.setFontSize(10)
-        doc.text(labelText, leftX + bulletIndent, y)
-
-        doc.setFont('Calibri', 'normal')
-        restLines.forEach((line, lineIdx) => {
-          if (lineIdx === 0) {
-            doc.text(line, leftX + bulletIndent + labelWidth + 4, y)
-          } else {
-            y += lineHeight
-            checkPageBreak(lineHeight)
-            doc.text(line, leftX + bulletIndent + labelWidth + 4, y)
-          }
-        })
-        y += lineHeight
-      } else {
-        // Plain bullet — wrap long lines across the content width
-        doc.setFont('Calibri', 'normal')
-        doc.setFontSize(10)
-        const wrappedLines = doc.splitTextToSize(bullet, wrapWidth)
-        checkPageBreak(lineHeight * wrappedLines.length)
-
-        doc.setDrawColor(0, 0, 0)
-        doc.setFillColor(0, 0, 0)
-        doc.circle(leftX + 6, y - 3, bulletRadius, 'F')
-
-        wrappedLines.forEach((line, lineIdx) => {
-          if (lineIdx > 0) {
-            y += lineHeight
-            checkPageBreak(lineHeight)
-          }
-          doc.text(line, leftX + bulletIndent, y)
-        })
-        y += lineHeight
-      }
+      if (bullet === undefined || bullet === null) return
+      const formatted = formatBulletText(bullet)
+      checkPageBreak(12)
+      doc.setDrawColor(0, 0, 0)
+      doc.setFillColor(0, 0, 0)
+      
+      const startY = y
+      doc.circle(leftX + 6, startY - 3, bulletRadius, 'F')
+      drawFormattedText(formatted, leftX + bulletIndent, wrapWidth)
     })
   }
 
-  const drawParagraph = (text) => {
-    const lineHeight = 12
-    doc.setFont('Calibri', 'normal')
-    doc.setFontSize(10)
-    // Split by newlines so we preserve user paragraph breaks and wrap each separately
-    const lines = text.split('\n')
+  const drawParagraph = (text, indented = false) => {
+    const safeText = typeof text === 'string' ? text : String(text || '')
+    const lines = safeText.split('\n')
     lines.forEach((pText) => {
-      const wrappedLines = doc.splitTextToSize(pText.trim(), contentWidth)
-      checkPageBreak(lineHeight * wrappedLines.length)
-      wrappedLines.forEach((line) => {
-        doc.text(line, leftX, y)
-        y += lineHeight
-        checkPageBreak(lineHeight)
-      })
-      // Add a small paragraph gap for subsequent paragraph blocks
+      let formattedText = pText.trim()
+      if (indented) {
+        formattedText = '      ' + formattedText
+      }
+      drawFormattedText(formattedText, leftX, contentWidth)
       y += 3
     })
   }
 
   const drawNonBulletedLines = (lines) => {
-    const lineHeight = 12
+    if (!Array.isArray(lines)) return
     lines.forEach((line) => {
-      doc.setFont('Calibri', 'normal')
-      doc.setFontSize(10)
-      const wrappedLines = doc.splitTextToSize(line, contentWidth)
-      checkPageBreak(lineHeight * wrappedLines.length)
-      wrappedLines.forEach((wrappedLine) => {
-        doc.text(wrappedLine, leftX, y)
-        y += lineHeight
-        checkPageBreak(lineHeight)
-      })
+      if (line !== undefined && line !== null) {
+        drawFormattedText(String(line), leftX, contentWidth)
+      }
     })
   }
 
@@ -328,8 +468,8 @@ export async function generateResumePdfDoc(resume = defaultResume) {
         if (section.kind === 'education') {
           drawSectionTitle(section.title || 'EDUCATION')
           section.items.forEach((item) => {
-            drawLinePair(`${item.degree} - ${item.school}`, item.location, 'bold')
-            drawSubLinePair(item.subtitle, item.dates)
+            const title = `${item.degree || ''}${item.school ? ` - ${item.school}` : ''}`.trim()
+            drawItemHeader(title, item.subtitle, item.location, item.dates)
             if (item.bullets?.length) {
               drawBullets(item.bullets)
             }
@@ -346,15 +486,14 @@ export async function generateResumePdfDoc(resume = defaultResume) {
           drawSectionTitle(section.title)
           section.items.forEach((item) => {
             if (item.paragraph) {
-              drawParagraph(item.paragraph)
+              drawParagraph(item.paragraph, section.indented)
             }
             y += 6
           })
         } else if (section.kind === 'list') {
           drawSectionTitle(section.title)
           section.items.forEach((item) => {
-            drawLinePair(item.title, item.location, 'bold')
-            drawSubLinePair(item.subtitle, item.dates)
+            drawItemHeader(item.title, item.subtitle, item.location, item.dates)
             if (item.details?.length) {
               drawNonBulletedLines(item.details)
             }
@@ -364,8 +503,7 @@ export async function generateResumePdfDoc(resume = defaultResume) {
           // Custom section
           drawSectionTitle(section.title)
           section.items.forEach((item) => {
-            drawLinePair(item.title, item.location, 'bold')
-            drawSubLinePair(item.subtitle, item.dates)
+            drawItemHeader(item.title, item.subtitle, item.location, item.dates)
             if (item.details?.length) {
               drawBullets(item.details)
             }
@@ -376,8 +514,7 @@ export async function generateResumePdfDoc(resume = defaultResume) {
         // Legacy custom section structure
         drawSectionTitle(section.title)
         section.items.forEach((item) => {
-          drawLinePair(item.title, item.location, 'bold')
-          drawSubLinePair(item.subtitle, item.dates)
+          drawItemHeader(item.title, item.subtitle, item.location, item.dates)
           if (item.details?.length) {
             drawBullets(item.details)
           }
@@ -391,8 +528,8 @@ export async function generateResumePdfDoc(resume = defaultResume) {
   if (resume.education?.length) {
     drawSectionTitle('EDUCATION')
     resume.education.forEach((item) => {
-      drawLinePair(`${item.degree} - ${item.school}`, item.location, 'bold')
-      drawSubLinePair(item.subtitle, item.dates)
+      const title = `${item.degree || ''}${item.school ? ` - ${item.school}` : ''}`.trim()
+      drawItemHeader(title, item.subtitle, item.location, item.dates)
       if (item.bullets?.length) {
         drawBullets(item.bullets)
       }

@@ -1446,6 +1446,7 @@ function Builder({ onNavigate }) {
       languages: '',
       sectionType: 'custom',
       paragraph: '',
+      indented: false,
     })
     setModalState({
       open: true,
@@ -1545,11 +1546,13 @@ function Builder({ onNavigate }) {
 
   const openEditSection = (sectionId, target = 'resume') => {
     let title = ''
+    let indented = false
     if (target === 'library') {
       title = sectionId
     } else {
       const section = resumeSections.find((item) => item.id === sectionId)
       title = section?.title ?? ''
+      indented = section?.indented ?? false
     }
 
     setModalForm({
@@ -1572,6 +1575,7 @@ function Builder({ onNavigate }) {
       bullets: '',
       details: '',
       languages: '',
+      indented,
     })
     setModalState({
       open: true,
@@ -1691,16 +1695,18 @@ function Builder({ onNavigate }) {
         if (modalState.mode === 'add' && modalForm.title.trim()) {
           const newId = generateId('section')
           const newKind = modalForm.sectionType || 'custom'
+          const indented = modalForm.indented || false
           setResumeSections((sections) => [
             ...sections,
-            { id: newId, title: modalForm.title.trim(), kind: newKind, items: [] },
+            { id: newId, title: modalForm.title.trim(), kind: newKind, items: [], indented },
           ])
         }
         if (modalState.mode === 'edit' && modalForm.title.trim()) {
+          const indented = modalForm.indented || false
           setResumeSections((sections) =>
             sections.map((section) =>
               section.id === modalState.sectionId
-                ? { ...section, title: modalForm.title.trim() }
+                ? { ...section, title: modalForm.title.trim(), indented }
                 : section,
             ),
           )
@@ -1975,6 +1981,7 @@ function Builder({ onNavigate }) {
           return {
             title: section.title.toUpperCase(),
             kind: 'paragraph',
+            indented: section.indented || false,
             items: enabledItems.map((item) => ({
               label: item.label || '',
               paragraph: item.paragraph || '',
