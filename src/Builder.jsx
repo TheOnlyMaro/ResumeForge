@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -20,6 +20,129 @@ const generateId = (prefix) => {
   idCounter++
   const randomPart = Math.random().toString(36).substring(2, 9)
   return `${prefix}-${Date.now()}-${idCounter}-${randomPart}`
+}
+
+const DEFAULT_RESUME_SECTIONS = [
+  {
+    id: 'education',
+    title: 'Education',
+    kind: 'education',
+    items: [
+      {
+        id: 'edu-1',
+        type: 'education',
+        label: 'School of Design - Harvard University',
+        degree: 'School of Design',
+        school: 'Harvard University',
+        location: 'Cambridge, MA',
+        field: 'B.Sc. in Visual Communication',
+        dates: '2016 - 2020',
+        bullets: ['Honors thesis on accessible product systems'],
+        enabled: true,
+      },
+    ],
+  },
+  {
+    id: 'experience',
+    title: 'Experience',
+    kind: 'custom',
+    items: [
+      {
+        id: 'exp-1',
+        type: 'custom',
+        label: 'Lead Product Designer',
+        name: 'Lead Product Designer',
+        location: 'Remote',
+        subtitle: 'Forge Studio',
+        dates: '2022 - Present',
+        details: [
+          'Designed 12 resume templates used by 40k+ job seekers.',
+          'Reduced editing time by 45% with modular section controls.',
+        ],
+        enabled: true,
+      },
+    ],
+  },
+]
+
+const DEFAULT_LIBRARY_SECTIONS = ['Experience', 'Projects', 'Skills']
+
+const DEFAULT_LIBRARY_ITEMS = {
+  Experience: [
+    {
+      id: 'lib-exp-1',
+      type: 'custom',
+      label: 'Portfolio review',
+      subtitle: 'Forge Studio',
+      location: 'Remote',
+      dates: '2022 - Present',
+      details: ['Led product review sessions', 'Improved UX clarity'],
+    },
+    {
+      id: 'lib-exp-2',
+      type: 'custom',
+      label: 'Leadership',
+      subtitle: 'Design Guild',
+      location: 'Boston, MA',
+      dates: '2020 - 2022',
+      details: ['Mentored junior designers', 'Ran weekly crits'],
+    },
+    {
+      id: 'lib-exp-3',
+      type: 'custom',
+      label: 'Optimization',
+      subtitle: 'Sprint Ops',
+      location: 'Austin, TX',
+      dates: '2019 - 2020',
+      details: ['Reduced handoff time by 20%'],
+    },
+  ],
+  Projects: [
+    {
+      id: 'lib-proj-1',
+      type: 'custom',
+      label: 'Case study',
+      subtitle: 'Mobile onboarding',
+      location: 'Remote',
+      dates: '2023',
+      details: ['Boosted conversion by 12%'],
+    },
+    {
+      id: 'lib-proj-2',
+      type: 'custom',
+      label: 'Product launch',
+      subtitle: 'B2B dashboard',
+      location: 'Remote',
+      dates: '2022',
+      details: ['Shipped MVP in 6 weeks'],
+    },
+  ],
+  Skills: [
+    {
+      id: 'lib-skill-1',
+      type: 'custom',
+      label: 'Design systems',
+      subtitle: '',
+      location: '',
+      dates: '',
+      details: ['Tokens, components, accessibility'],
+    },
+    {
+      id: 'lib-skill-2',
+      type: 'custom',
+      label: 'User research',
+      subtitle: '',
+      location: '',
+      dates: '',
+      details: ['Interviews, surveys, synthesis'],
+    },
+  ],
+}
+
+const DEFAULT_TITLE_DATA = {
+  name: defaultResume.name,
+  subtitle: defaultResume.subtitle,
+  contacts: defaultResume.contacts.map((entry) => ({ ...entry })),
 }
 
 function Builder({ onNavigate }) {
@@ -168,34 +291,341 @@ function Builder({ onNavigate }) {
     message: '',
   })
 
-  // ── Workspace Mock States (Phase 1 GUI First) ───────────────────
-  const [resumes, setResumes] = useState([
-    { id: 'resume-1', name: 'Harvard Template Resume' },
-    { id: 'resume-2', name: 'Software Engineer Resume' },
-  ])
-  const [activeResumeId, setActiveResumeId] = useState('resume-1')
-
-  const [masterCvs, setMasterCvs] = useState([
-    { id: 'cv-1', name: "Maro's Master CV" },
-  ])
-  const [activeMasterCvId, setActiveMasterCvId] = useState('cv-1')
-
+  // ── Data Persistence: States & Workspace Engine (Phase 2) ───────
+  const [resumes, setResumes] = useState([])
+  const [activeResumeId, setActiveResumeId] = useState('')
+  const [masterCvs, setMasterCvs] = useState([])
+  const [activeMasterCvId, setActiveMasterCvId] = useState('')
   const [autosaveEnabled, setAutosaveEnabled] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
 
+  // saveWorkspace always requires explicit snapshots for all mutable data.
+  // Never rely on closure-captured state to avoid cross-file seeping.
+  const saveWorkspace = ({
+    resumesList = resumes,
+    activeId = activeResumeId,
+    activeSections = resumeSections,
+    activeTitleData = titleData,
+    masterCvsList = masterCvs,
+    activeCvId = activeMasterCvId,
+    activeLibrarySections = librarySections,
+    activeLibraryItems = libraryItems,
+    autosave = autosaveEnabled,
+  } = {}) => {
+    const updatedResumes = resumesList.map((r) => {
+      if (r.id === activeId) {
+        return {
+          ...r,
+          resumeSections: activeSections,
+          titleData: activeTitleData,
+          updatedAt: Date.now(),
+        }
+      }
+      return r
+    })
+
+    const updatedMasterCvs = masterCvsList.map((cv) => {
+      if (cv.id === activeCvId) {
+        return {
+          ...cv,
+          librarySections: activeLibrarySections,
+          libraryItems: activeLibraryItems,
+          updatedAt: Date.now(),
+        }
+      }
+      return cv
+    })
+
+    const workspaceState = {
+      activeResumeId: activeId,
+      activeMasterCvId: activeCvId,
+      autosaveEnabled: autosave,
+      resumes: updatedResumes,
+      masterCvs: updatedMasterCvs,
+    }
+
+    localStorage.setItem('resume_forge_workspace_v1', JSON.stringify(workspaceState))
+  }
+
+  const initializeDefaults = () => {
+    const defaultCv = {
+      id: 'cv-1',
+      name: "Maro's Master CV",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      librarySections: DEFAULT_LIBRARY_SECTIONS,
+      libraryItems: DEFAULT_LIBRARY_ITEMS,
+    }
+    const defaultRes1 = {
+      id: 'resume-1',
+      name: 'Harvard Template Resume',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      titleData: DEFAULT_TITLE_DATA,
+      resumeSections: DEFAULT_RESUME_SECTIONS,
+    }
+    const defaultRes2 = {
+      id: 'resume-2',
+      name: 'Software Engineer Resume',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      titleData: {
+        name: 'Maro (Software Engineer)',
+        subtitle: 'Lead Software Engineer',
+        contacts: defaultResume.contacts.map((entry) => ({ ...entry })),
+      },
+      resumeSections: DEFAULT_RESUME_SECTIONS,
+    }
+
+    const initialWorkspace = {
+      activeResumeId: 'resume-1',
+      activeMasterCvId: 'cv-1',
+      autosaveEnabled: false,
+      resumes: [defaultRes1, defaultRes2],
+      masterCvs: [defaultCv],
+    }
+
+    setResumes([defaultRes1, defaultRes2])
+    setActiveResumeId('resume-1')
+    setResumeSections(DEFAULT_RESUME_SECTIONS)
+    setTitleData(DEFAULT_TITLE_DATA)
+
+    setMasterCvs([defaultCv])
+    setActiveMasterCvId('cv-1')
+    setLibrarySections(DEFAULT_LIBRARY_SECTIONS)
+    setLibraryItems(DEFAULT_LIBRARY_ITEMS)
+    setLibraryActiveSection(DEFAULT_LIBRARY_SECTIONS[0])
+
+    setAutosaveEnabled(false)
+    localStorage.setItem('resume_forge_workspace_v1', JSON.stringify(initialWorkspace))
+  }
+
+  // Load state from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('resume_forge_workspace_v1')
+    if (saved) {
+      try {
+        const workspace = JSON.parse(saved)
+
+        if (workspace.autosaveEnabled !== undefined) {
+          setAutosaveEnabled(workspace.autosaveEnabled)
+        }
+
+        if (workspace.masterCvs && workspace.masterCvs.length > 0) {
+          setMasterCvs(workspace.masterCvs)
+          const activeCvId = workspace.activeMasterCvId || workspace.masterCvs[0].id
+          setActiveMasterCvId(activeCvId)
+
+          const activeCv = workspace.masterCvs.find((c) => c.id === activeCvId)
+          if (activeCv) {
+            setLibrarySections(activeCv.librarySections || [])
+            setLibraryItems(activeCv.libraryItems || {})
+            if (activeCv.librarySections && activeCv.librarySections.length > 0) {
+              setLibraryActiveSection(activeCv.librarySections[0])
+            }
+          }
+        } else {
+          const defaultCv = {
+            id: 'cv-1',
+            name: "Maro's Master CV",
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            librarySections: DEFAULT_LIBRARY_SECTIONS,
+            libraryItems: DEFAULT_LIBRARY_ITEMS,
+          }
+          setMasterCvs([defaultCv])
+          setActiveMasterCvId('cv-1')
+          setLibrarySections(DEFAULT_LIBRARY_SECTIONS)
+          setLibraryItems(DEFAULT_LIBRARY_ITEMS)
+          setLibraryActiveSection(DEFAULT_LIBRARY_SECTIONS[0])
+        }
+
+        if (workspace.resumes && workspace.resumes.length > 0) {
+          setResumes(workspace.resumes)
+          const activeId = workspace.activeResumeId || workspace.resumes[0].id
+          setActiveResumeId(activeId)
+
+          const activeRes = workspace.resumes.find((r) => r.id === activeId)
+          if (activeRes) {
+            setResumeSections(activeRes.resumeSections || [])
+            setTitleData(activeRes.titleData || { name: '', subtitle: '', contacts: [] })
+          }
+        } else {
+          const defaultRes1 = {
+            id: 'resume-1',
+            name: 'Harvard Template Resume',
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            titleData: DEFAULT_TITLE_DATA,
+            resumeSections: DEFAULT_RESUME_SECTIONS,
+          }
+          setResumes([defaultRes1])
+          setActiveResumeId('resume-1')
+          setResumeSections(DEFAULT_RESUME_SECTIONS)
+          setTitleData(DEFAULT_TITLE_DATA)
+        }
+      } catch (e) {
+        console.error('Failed to load workspace, resetting defaults:', e)
+        initializeDefaults()
+      }
+    } else {
+      initializeDefaults()
+    }
+    setIsLoaded(true)
+  }, [])
+
+  // Autosave triggers on state edits (only after isLoaded is set to true).
+  // Pass all snapshots explicitly so the save always captures the correct data
+  // for the correct file — never stale closure values.
+  useEffect(() => {
+    if (isLoaded && autosaveEnabled) {
+      saveWorkspace({
+        resumesList: resumes,
+        activeId: activeResumeId,
+        activeSections: resumeSections,
+        activeTitleData: titleData,
+        masterCvsList: masterCvs,
+        activeCvId: activeMasterCvId,
+        activeLibrarySections: librarySections,
+        activeLibraryItems: libraryItems,
+        autosave: autosaveEnabled,
+      })
+    }
+  }, [
+    isLoaded,
+    autosaveEnabled,
+    resumeSections,
+    titleData,
+    librarySections,
+    libraryItems,
+    resumes,
+    masterCvs,
+    activeResumeId,
+    activeMasterCvId,
+  ])
+
+  // ── Workspace Swivel & File Handlers ─────────────────────────────
   const switchActiveResume = (newId) => {
+    if (newId === activeResumeId) return
+
+    // Capture current in-flight data before switching
+    const outgoingSections = resumeSections
+    const outgoingTitle = titleData
+
+    setResumes((prevResumes) => {
+      // Flush outgoing file's current edits into the array
+      const updated = prevResumes.map((r) => {
+        if (r.id === activeResumeId) {
+          return {
+            ...r,
+            resumeSections: outgoingSections,
+            titleData: outgoingTitle,
+            updatedAt: Date.now(),
+          }
+        }
+        return r
+      })
+
+      // Load incoming file's data
+      const targetResume = updated.find((r) => r.id === newId)
+      const incomingSections = targetResume?.resumeSections ?? []
+      const incomingTitle = targetResume?.titleData ?? { name: '', subtitle: '', contacts: [] }
+
+      setResumeSections(incomingSections)
+      setTitleData(incomingTitle)
+
+      // Save with explicit snapshots — incoming data for incoming ID, outgoing already flushed
+      saveWorkspace({
+        resumesList: updated,
+        activeId: newId,
+        activeSections: incomingSections,
+        activeTitleData: incomingTitle,
+        masterCvsList: masterCvs,
+        activeCvId: activeMasterCvId,
+        activeLibrarySections: librarySections,
+        activeLibraryItems: libraryItems,
+        autosave: autosaveEnabled,
+      })
+
+      return updated
+    })
     setActiveResumeId(newId)
-    showDismissNotice(`Switched active resume to "${resumes.find(r => r.id === newId)?.name}"!`)
+    const targetName = resumes.find((r) => r.id === newId)?.name || 'selected resume'
+    showDismissNotice(`Switched active resume to "${targetName}"!`)
   }
 
   const switchActiveMasterCv = (newId) => {
+    if (newId === activeMasterCvId) return
+
+    // Capture current in-flight data before switching
+    const outgoingLibrarySections = librarySections
+    const outgoingLibraryItems = libraryItems
+
+    setMasterCvs((prevCvs) => {
+      // Flush outgoing CV's current edits
+      const updated = prevCvs.map((cv) => {
+        if (cv.id === activeMasterCvId) {
+          return {
+            ...cv,
+            librarySections: outgoingLibrarySections,
+            libraryItems: outgoingLibraryItems,
+            updatedAt: Date.now(),
+          }
+        }
+        return cv
+      })
+
+      // Load incoming CV's data
+      const targetCv = updated.find((cv) => cv.id === newId)
+      const incomingLibSections = targetCv?.librarySections ?? []
+      const incomingLibItems = targetCv?.libraryItems ?? {}
+
+      setLibrarySections(incomingLibSections)
+      setLibraryItems(incomingLibItems)
+      if (incomingLibSections.length > 0) {
+        setLibraryActiveSection(incomingLibSections[0])
+      }
+
+      // Save with explicit snapshots
+      saveWorkspace({
+        resumesList: resumes,
+        activeId: activeResumeId,
+        activeSections: resumeSections,
+        activeTitleData: titleData,
+        masterCvsList: updated,
+        activeCvId: newId,
+        activeLibrarySections: incomingLibSections,
+        activeLibraryItems: incomingLibItems,
+        autosave: autosaveEnabled,
+      })
+
+      return updated
+    })
     setActiveMasterCvId(newId)
-    showDismissNotice(`Switched active Master CV to "${masterCvs.find(c => c.id === newId)?.name}"!`)
+    const targetName = masterCvs.find((cv) => cv.id === newId)?.name || 'selected Master CV'
+    showDismissNotice(`Switched active Master CV to "${targetName}"!`)
   }
 
   const renameResume = (id, currentName) => {
     const newName = prompt('Enter a new filename for this Resume:', currentName)
     if (newName && newName.trim()) {
-      setResumes(prev => prev.map(r => r.id === id ? { ...r, name: newName.trim() } : r))
+      setResumes((prev) => {
+        const updated = prev.map((r) =>
+          r.id === id ? { ...r, name: newName.trim(), updatedAt: Date.now() } : r
+        )
+        saveWorkspace({
+          resumesList: updated,
+          activeId: activeResumeId,
+          activeSections: resumeSections,
+          activeTitleData: titleData,
+          masterCvsList: masterCvs,
+          activeCvId: activeMasterCvId,
+          activeLibrarySections: librarySections,
+          activeLibraryItems: libraryItems,
+          autosave: autosaveEnabled,
+        })
+        return updated
+      })
       showDismissNotice(`Renamed Resume file to "${newName.trim()}"!`)
     }
   }
@@ -203,23 +633,59 @@ function Builder({ onNavigate }) {
   const renameMasterCv = (id, currentName) => {
     const newName = prompt('Enter a new filename for this Master CV:', currentName)
     if (newName && newName.trim()) {
-      setMasterCvs(prev => prev.map(c => c.id === id ? { ...c, name: newName.trim() } : c))
+      setMasterCvs((prev) => {
+        const updated = prev.map((c) =>
+          c.id === id ? { ...c, name: newName.trim(), updatedAt: Date.now() } : c
+        )
+        saveWorkspace({
+          resumesList: resumes,
+          activeId: activeResumeId,
+          activeSections: resumeSections,
+          activeTitleData: titleData,
+          masterCvsList: updated,
+          activeCvId: activeMasterCvId,
+          activeLibrarySections: librarySections,
+          activeLibraryItems: libraryItems,
+          autosave: autosaveEnabled,
+        })
+        return updated
+      })
       showDismissNotice(`Renamed Master CV file to "${newName.trim()}"!`)
     }
   }
 
   const deleteResume = (id) => {
-    const target = resumes.find(r => r.id === id)
+    const target = resumes.find((r) => r.id === id)
     if (resumes.length <= 1) {
       alert('You must maintain at least one Resume file.')
       return
     }
     if (confirm(`Are you sure you want to delete "${target?.name}"?`)) {
-      setResumes(prev => {
-        const updated = prev.filter(r => r.id !== id)
+      setResumes((prev) => {
+        const updated = prev.filter((r) => r.id !== id)
+        let nextActiveId = activeResumeId
+        let nextSections = resumeSections
+        let nextTitleData = titleData
         if (id === activeResumeId) {
-          setActiveResumeId(updated[0].id)
+          nextActiveId = updated[0].id
+          const nextResume = updated[0]
+          nextSections = nextResume.resumeSections || []
+          nextTitleData = nextResume.titleData || { name: '', subtitle: '', contacts: [] }
+          setResumeSections(nextSections)
+          setTitleData(nextTitleData)
+          setActiveResumeId(nextActiveId)
         }
+        saveWorkspace({
+          resumesList: updated,
+          activeId: nextActiveId,
+          activeSections: nextSections,
+          activeTitleData: nextTitleData,
+          masterCvsList: masterCvs,
+          activeCvId: activeMasterCvId,
+          activeLibrarySections: librarySections,
+          activeLibraryItems: libraryItems,
+          autosave: autosaveEnabled,
+        })
         return updated
       })
       showDismissNotice(`Deleted resume file "${target?.name}".`)
@@ -227,17 +693,40 @@ function Builder({ onNavigate }) {
   }
 
   const deleteMasterCv = (id) => {
-    const target = masterCvs.find(c => c.id === id)
+    const target = masterCvs.find((c) => c.id === id)
     if (masterCvs.length <= 1) {
       alert('You must maintain at least one Master CV file.')
       return
     }
     if (confirm(`Are you sure you want to delete "${target?.name}"?`)) {
-      setMasterCvs(prev => {
-        const updated = prev.filter(c => c.id !== id)
+      setMasterCvs((prev) => {
+        const updated = prev.filter((c) => c.id !== id)
+        let nextActiveCvId = activeMasterCvId
+        let nextLibSections = librarySections
+        let nextLibItems = libraryItems
         if (id === activeMasterCvId) {
-          setActiveMasterCvId(updated[0].id)
+          nextActiveCvId = updated[0].id
+          const nextCv = updated[0]
+          nextLibSections = nextCv.librarySections || []
+          nextLibItems = nextCv.libraryItems || {}
+          setLibrarySections(nextLibSections)
+          setLibraryItems(nextLibItems)
+          if (nextLibSections.length > 0) {
+            setLibraryActiveSection(nextLibSections[0])
+          }
+          setActiveMasterCvId(nextActiveCvId)
         }
+        saveWorkspace({
+          resumesList: resumes,
+          activeId: activeResumeId,
+          activeSections: resumeSections,
+          activeTitleData: titleData,
+          masterCvsList: updated,
+          activeCvId: nextActiveCvId,
+          activeLibrarySections: nextLibSections,
+          activeLibraryItems: nextLibItems,
+          autosave: autosaveEnabled,
+        })
         return updated
       })
       showDismissNotice(`Deleted Master CV file "${target?.name}".`)
@@ -245,62 +734,434 @@ function Builder({ onNavigate }) {
   }
 
   const duplicateResume = (id) => {
-    const target = resumes.find(r => r.id === id)
+    const target = resumes.find((r) => r.id === id)
     if (!target) return
+    const currentSections = id === activeResumeId ? resumeSections : target.resumeSections
+    const currentTitle = id === activeResumeId ? titleData : target.titleData
+
     const newResume = {
       id: generateId('resume'),
-      name: `${target.name} (Copy)`
+      name: `${target.name} (Copy)`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      resumeSections: JSON.parse(JSON.stringify(currentSections)),
+      titleData: JSON.parse(JSON.stringify(currentTitle)),
     }
-    setResumes(prev => [...prev, newResume])
-    setActiveResumeId(newResume.id)
+    setResumes((prev) => {
+      const updated = [...prev, newResume]
+      setResumeSections(newResume.resumeSections)
+      setTitleData(newResume.titleData)
+      setActiveResumeId(newResume.id)
+      saveWorkspace({
+        resumesList: updated,
+        activeId: newResume.id,
+        activeSections: newResume.resumeSections,
+        activeTitleData: newResume.titleData,
+        masterCvsList: masterCvs,
+        activeCvId: activeMasterCvId,
+        activeLibrarySections: librarySections,
+        activeLibraryItems: libraryItems,
+        autosave: autosaveEnabled,
+      })
+      return updated
+    })
     showDismissNotice(`Duplicated and switched to "${newResume.name}"!`)
   }
 
   const createEmptyResume = () => {
     const newResume = {
       id: generateId('resume'),
-      name: `Untitled Resume (${resumes.length + 1})`
+      name: `Untitled Resume (${resumes.length + 1})`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      titleData: {
+        name: 'Your Name',
+        subtitle: 'Your Professional Title',
+        contacts: [],
+      },
+      resumeSections: [],
     }
-    setResumes(prev => [...prev, newResume])
-    setActiveResumeId(newResume.id)
+    setResumes((prev) => {
+      const updated = [...prev, newResume]
+      setResumeSections([])
+      setTitleData(newResume.titleData)
+      setActiveResumeId(newResume.id)
+      saveWorkspace({
+        resumesList: updated,
+        activeId: newResume.id,
+        activeSections: [],
+        activeTitleData: newResume.titleData,
+        masterCvsList: masterCvs,
+        activeCvId: activeMasterCvId,
+        activeLibrarySections: librarySections,
+        activeLibraryItems: libraryItems,
+        autosave: autosaveEnabled,
+      })
+      return updated
+    })
     showDismissNotice(`Created empty resume "${newResume.name}"!`)
   }
 
   const createResumeFromMasterCv = () => {
+    const activeCv = masterCvs.find((cv) => cv.id === activeMasterCvId)
+    if (!activeCv) return
+
+    const newSections = (activeCv.librarySections || []).map((sectionTitle) => {
+      const items = activeCv.libraryItems[sectionTitle] || []
+      const kind = inferKindFromTitle(sectionTitle)
+      return {
+        id: generateId('section'),
+        title: sectionTitle,
+        kind: kind,
+        items: items.map((item) => buildResumeItemFromLibrary(item, kind)),
+      }
+    })
+
     const newResume = {
       id: generateId('resume'),
-      name: `Resume from Master CV (${resumes.length + 1})`
+      name: `Resume from Master CV (${resumes.length + 1})`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      titleData: {
+        name: 'Your Name',
+        subtitle: 'Your Professional Title',
+        contacts: [],
+      },
+      resumeSections: newSections,
     }
-    setResumes(prev => [...prev, newResume])
-    setActiveResumeId(newResume.id)
+    setResumes((prev) => {
+      const updated = [...prev, newResume]
+      setResumeSections(newSections)
+      setTitleData(newResume.titleData)
+      setActiveResumeId(newResume.id)
+      saveWorkspace({
+        resumesList: updated,
+        activeId: newResume.id,
+        activeSections: newSections,
+        activeTitleData: newResume.titleData,
+        masterCvsList: masterCvs,
+        activeCvId: activeMasterCvId,
+        activeLibrarySections: librarySections,
+        activeLibraryItems: libraryItems,
+        autosave: autosaveEnabled,
+      })
+      return updated
+    })
     showDismissNotice(`Created new resume from Master CV: "${newResume.name}"!`)
   }
 
   const createNewMasterCv = () => {
     const newCv = {
       id: generateId('cv'),
-      name: `Untitled Master CV (${masterCvs.length + 1})`
+      name: `Untitled Master CV (${masterCvs.length + 1})`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      librarySections: ['Experience', 'Projects', 'Skills'],
+      libraryItems: {
+        Experience: [],
+        Projects: [],
+        Skills: [],
+      },
     }
-    setMasterCvs(prev => [...prev, newCv])
-    setActiveMasterCvId(newCv.id)
+    setMasterCvs((prev) => {
+      const updated = [...prev, newCv]
+      setLibrarySections(newCv.librarySections)
+      setLibraryItems(newCv.libraryItems)
+      setLibraryActiveSection('Experience')
+      setActiveMasterCvId(newCv.id)
+      saveWorkspace({
+        resumesList: resumes,
+        activeId: activeResumeId,
+        activeSections: resumeSections,
+        activeTitleData: titleData,
+        masterCvsList: updated,
+        activeCvId: newCv.id,
+        activeLibrarySections: newCv.librarySections,
+        activeLibraryItems: newCv.libraryItems,
+        autosave: autosaveEnabled,
+      })
+      return updated
+    })
     showDismissNotice(`Created and switched to Master CV "${newCv.name}"!`)
   }
 
   const handleToggleAutosave = () => {
-    setAutosaveEnabled(prev => !prev)
-    showDismissNotice(`Autosave turned ${!autosaveEnabled ? 'ON' : 'OFF'}!`)
+    const nextVal = !autosaveEnabled
+    setAutosaveEnabled(nextVal)
+    saveWorkspace({
+      resumesList: resumes,
+      activeId: activeResumeId,
+      activeSections: resumeSections,
+      activeTitleData: titleData,
+      masterCvsList: masterCvs,
+      activeCvId: activeMasterCvId,
+      activeLibrarySections: librarySections,
+      activeLibraryItems: libraryItems,
+      autosave: nextVal,
+    })
+    showDismissNotice(`Autosave is now turned ${nextVal ? 'ON' : 'OFF'}!`)
   }
 
   const handleManualSave = () => {
-    showDismissNotice('Saved work (Mock)!')
+    saveWorkspace({
+      resumesList: resumes,
+      activeId: activeResumeId,
+      activeSections: resumeSections,
+      activeTitleData: titleData,
+      masterCvsList: masterCvs,
+      activeCvId: activeMasterCvId,
+      activeLibrarySections: librarySections,
+      activeLibraryItems: libraryItems,
+      autosave: autosaveEnabled,
+    })
+    showDismissNotice('All changes manually saved to local storage!')
   }
 
   const triggerJsonImport = () => {
-    alert('JSON Import dialog will open (Mock, ready for Phase 5 integration).')
+    const fileInput = document.createElement('input')
+    fileInput.type = 'file'
+    fileInput.accept = '.json'
+    fileInput.onchange = (e) => {
+      const file = e.target.files[0]
+      if (!file) return
+
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result)
+          
+          // Structural validation
+          if (parsed.fileType === 'resume_forge_resume') {
+            if (!parsed.resumeSections || !parsed.titleData) {
+              alert('Invalid Resume JSON structure: missing sections or title data.')
+              return
+            }
+            
+            const activeResName = resumes.find(r => r.id === activeResumeId)?.name || 'Untitled'
+            const importChoice = prompt(
+              `Importing Resume: "${parsed.name || 'Untitled'}"\n\nType '1' to Import as a NEW Resume\nType '2' to OVERWRITE your active Resume ("${activeResName}")`,
+              "1"
+            )
+            if (!importChoice) return
+            const choice = importChoice.trim()
+            
+            if (choice === '1') {
+              const newResume = {
+                id: generateId('resume'),
+                name: parsed.name ? `${parsed.name} (Imported)` : `Imported Resume (${resumes.length + 1})`,
+                createdAt: parsed.createdAt || Date.now(),
+                updatedAt: Date.now(),
+                titleData: parsed.titleData,
+                resumeSections: parsed.resumeSections,
+              }
+              setResumes((prev) => {
+                const updated = [...prev, newResume]
+                setResumeSections(newResume.resumeSections)
+                setTitleData(newResume.titleData)
+                setActiveResumeId(newResume.id)
+                saveWorkspace({
+                  resumesList: updated,
+                  activeId: newResume.id,
+                  activeSections: newResume.resumeSections,
+                  activeTitleData: newResume.titleData,
+                  masterCvsList: masterCvs,
+                  activeCvId: activeMasterCvId,
+                  activeLibrarySections: librarySections,
+                  activeLibraryItems: libraryItems,
+                  autosave: autosaveEnabled,
+                })
+                return updated
+              })
+              showDismissNotice(`Imported new Resume "${newResume.name}"!`)
+            } else if (choice === '2') {
+              setResumeSections(parsed.resumeSections)
+              setTitleData(parsed.titleData)
+              setResumes((prev) => {
+                const updated = prev.map((r) =>
+                  r.id === activeResumeId
+                    ? {
+                        ...r,
+                        name: parsed.name || r.name,
+                        updatedAt: Date.now(),
+                        resumeSections: parsed.resumeSections,
+                        titleData: parsed.titleData,
+                      }
+                    : r
+                )
+                saveWorkspace({
+                  resumesList: updated,
+                  activeId: activeResumeId,
+                  activeSections: parsed.resumeSections,
+                  activeTitleData: parsed.titleData,
+                  masterCvsList: masterCvs,
+                  activeCvId: activeMasterCvId,
+                  activeLibrarySections: librarySections,
+                  activeLibraryItems: libraryItems,
+                  autosave: autosaveEnabled,
+                })
+                return updated
+              })
+              showDismissNotice(`Successfully overwrote active Resume!`)
+            } else {
+              alert('Invalid choice. Import cancelled.')
+            }
+
+          } else if (parsed.fileType === 'resume_forge_master_cv') {
+            if (!parsed.librarySections || !parsed.libraryItems) {
+              alert('Invalid Master CV JSON structure: missing sections or library items.')
+              return
+            }
+
+            const activeCvName = masterCvs.find(cv => cv.id === activeMasterCvId)?.name || 'Untitled'
+            const importChoice = prompt(
+              `Importing Master CV: "${parsed.name || 'Untitled'}"\n\nType '1' to Import as a NEW Master CV\nType '2' to OVERWRITE your active Master CV ("${activeCvName}")`,
+              "1"
+            )
+            if (!importChoice) return
+            const choice = importChoice.trim()
+
+            if (choice === '1') {
+              const newCv = {
+                id: generateId('cv'),
+                name: parsed.name ? `${parsed.name} (Imported)` : `Imported Master CV (${masterCvs.length + 1})`,
+                createdAt: parsed.createdAt || Date.now(),
+                updatedAt: Date.now(),
+                librarySections: parsed.librarySections,
+                libraryItems: parsed.libraryItems,
+              }
+              setMasterCvs((prev) => {
+                const updated = [...prev, newCv]
+                setLibrarySections(newCv.librarySections)
+                setLibraryItems(newCv.libraryItems)
+                if (newCv.librarySections && newCv.librarySections.length > 0) {
+                  setLibraryActiveSection(newCv.librarySections[0])
+                }
+                setActiveMasterCvId(newCv.id)
+                saveWorkspace({
+                  resumesList: resumes,
+                  activeId: activeResumeId,
+                  activeSections: resumeSections,
+                  activeTitleData: titleData,
+                  masterCvsList: updated,
+                  activeCvId: newCv.id,
+                  activeLibrarySections: newCv.librarySections,
+                  activeLibraryItems: newCv.libraryItems,
+                  autosave: autosaveEnabled,
+                })
+                return updated
+              })
+              showDismissNotice(`Imported new Master CV "${newCv.name}"!`)
+            } else if (choice === '2') {
+              setLibrarySections(parsed.librarySections)
+              setLibraryItems(parsed.libraryItems)
+              if (parsed.librarySections && parsed.librarySections.length > 0) {
+                setLibraryActiveSection(parsed.librarySections[0])
+              }
+              setMasterCvs((prev) => {
+                const updated = prev.map((cv) =>
+                  cv.id === activeMasterCvId
+                    ? {
+                        ...cv,
+                        name: parsed.name || cv.name,
+                        updatedAt: Date.now(),
+                        librarySections: parsed.librarySections,
+                        libraryItems: parsed.libraryItems,
+                      }
+                    : cv
+                )
+                saveWorkspace({
+                  resumesList: resumes,
+                  activeId: activeResumeId,
+                  activeSections: resumeSections,
+                  activeTitleData: titleData,
+                  masterCvsList: updated,
+                  activeCvId: activeMasterCvId,
+                  activeLibrarySections: parsed.librarySections,
+                  activeLibraryItems: parsed.libraryItems,
+                  autosave: autosaveEnabled,
+                })
+                return updated
+              })
+              showDismissNotice(`Successfully overwrote active Master CV!`)
+            } else {
+              alert('Invalid choice. Import cancelled.')
+            }
+
+          } else {
+            alert('Unrecognized JSON format. Make sure the file was exported from Resume Forge (must contain a fileType property).')
+          }
+        } catch (e) {
+          console.error(e)
+          alert('Failed to parse JSON file: ' + e.message)
+        }
+      }
+      reader.readAsText(file)
+    }
+    fileInput.click()
   }
 
   const triggerJsonExport = () => {
-    alert('JSON Export initiated (Mock, ready for Phase 5 integration).')
+    const activeRes = resumes.find((r) => r.id === activeResumeId)
+    const activeCv = masterCvs.find((c) => c.id === activeMasterCvId)
+
+    const choice = prompt(
+      `What would you like to export?\n\nType '1' or 'resume' to export Active Resume ("${activeRes?.name || 'Untitled'}")\nType '2' or 'cv' to export Active Master CV ("${activeCv?.name || 'Untitled'}")`,
+      "resume"
+    )
+    if (!choice) return
+
+    const normalized = choice.toLowerCase().trim()
+    let dataToExport = null
+    let filename = 'export.json'
+
+    if (normalized === '1' || normalized === 'resume') {
+      if (!activeRes) {
+        alert('No active resume found to export.')
+        return
+      }
+      dataToExport = {
+        fileType: 'resume_forge_resume',
+        version: 1,
+        name: activeRes.name,
+        createdAt: activeRes.createdAt,
+        updatedAt: Date.now(),
+        titleData: titleData,
+        resumeSections: resumeSections,
+      }
+      filename = `${activeRes.name || 'resume'}.json`
+    } else if (normalized === '2' || normalized === 'cv') {
+      if (!activeCv) {
+        alert('No active Master CV found to export.')
+        return
+      }
+      dataToExport = {
+        fileType: 'resume_forge_master_cv',
+        version: 1,
+        name: activeCv.name,
+        createdAt: activeCv.createdAt,
+        updatedAt: Date.now(),
+        librarySections: librarySections,
+        libraryItems: libraryItems,
+      }
+      filename = `${activeCv.name || 'master_cv'}.json`
+    } else {
+      alert("Invalid choice. Please enter 'resume' or 'cv'.")
+      return
+    }
+
+    const dataStr = JSON.stringify(dataToExport, null, 2)
+    const blob = new Blob([dataStr], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    
+    const downloadAnchor = document.createElement('a')
+    downloadAnchor.href = url
+    downloadAnchor.download = filename
+    document.body.appendChild(downloadAnchor)
+    downloadAnchor.click()
+    document.body.removeChild(downloadAnchor)
+    URL.revokeObjectURL(url)
+
+    showDismissNotice(`Exported "${filename}" successfully!`)
   }
   const [modalForm, setModalForm] = useState({
     title: '',
