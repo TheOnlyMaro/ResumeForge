@@ -5,6 +5,7 @@ function BuilderModal({
   setModalState,
   resumeSections,
   librarySections,
+  librarySectionKinds = {},
   onSubmit,
   onClose,
   onBackdropClose,
@@ -150,20 +151,68 @@ function BuilderModal({
               </button>
             </div>
           ) : modalState.type === 'section' ? (
-            <label className="text-sm text-slate-300">
-              Section title
-              <input
-                type="text"
-                value={modalForm.title}
-                onChange={(event) =>
-                  setModalForm((prev) => ({
-                    ...prev,
-                    title: event.target.value,
-                  }))
+            <div className="flex flex-col gap-4">
+              <label className="text-sm text-slate-300">
+                Section title
+                <input
+                  type="text"
+                  value={modalForm.title}
+                  onChange={(event) =>
+                    setModalForm((prev) => ({
+                      ...prev,
+                      title: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                />
+              </label>
+              {modalState.mode === 'add' && (
+                <label className="text-sm text-slate-300">
+                  Section type
+                  <select
+                    value={modalForm.sectionType || 'custom'}
+                    onChange={(event) => {
+                      const nextType = event.target.value
+                      setModalForm((prev) => ({
+                        ...prev,
+                        sectionType: nextType,
+                        indented: nextType === 'paragraph' ? true : prev.indented,
+                      }))
+                    }}
+                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100 cursor-pointer"
+                  >
+                    <option value="custom">Custom / Bulleted List (Default)</option>
+                    <option value="education">Education-like (Degree, School, Dates, etc.)</option>
+                    <option value="paragraph">Paragraph Section (Plain text narrative)</option>
+                    <option value="list">Non-bulleted List (Unindented lines)</option>
+                    <option value="language">Language / Single Row List</option>
+                  </select>
+                </label>
+              )}
+              {(() => {
+                const sectionBeingEdited = resumeSections.find((s) => s.id === modalState.sectionId);
+                const sectionKind = modalState.mode === 'add' ? (modalForm.sectionType || 'custom') : (sectionBeingEdited?.kind || 'custom');
+                if (sectionKind === 'paragraph') {
+                  return (
+                    <label className="flex items-center gap-3 text-sm text-slate-300 mt-2 cursor-pointer bg-slate-950/40 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition">
+                      <input
+                        type="checkbox"
+                        checked={modalForm.indented || false}
+                        onChange={(event) =>
+                          setModalForm((prev) => ({
+                            ...prev,
+                            indented: event.target.checked,
+                          }))
+                        }
+                        className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-sky-500 focus:ring-sky-500 focus:ring-offset-slate-950 cursor-pointer"
+                      />
+                      <span className="select-none">Indent paragraphs (first line indent)</span>
+                    </label>
+                  );
                 }
-                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
-              />
-            </label>
+                return null;
+              })()}
+            </div>
           ) : (
             <>
               {modalState.itemType === 'education' && (
@@ -256,7 +305,7 @@ function BuilderModal({
                   </label>
                 </>
               )}
-              {modalState.itemType === 'custom' && (
+              {(modalState.itemType === 'custom' || modalState.itemType === 'list') && (
                 <>
                   <div className="grid gap-4 md:grid-cols-2">
                     <label className="text-sm text-slate-300">
@@ -332,6 +381,40 @@ function BuilderModal({
                   </label>
                 </>
               )}
+              {modalState.itemType === 'paragraph' && (
+                <>
+                  <label className="text-sm text-slate-300">
+                    Paragraph label (optional - for editor organization)
+                    <input
+                      type="text"
+                      value={modalForm.itemName}
+                      onChange={(event) =>
+                        setModalForm((prev) => ({
+                          ...prev,
+                          itemName: event.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                      placeholder="e.g. Summary, Profile, Objectives..."
+                    />
+                  </label>
+                  <label className="text-sm text-slate-300">
+                    Paragraph narrative text
+                    <textarea
+                      rows={6}
+                      value={modalForm.paragraph}
+                      onChange={(event) =>
+                        setModalForm((prev) => ({
+                          ...prev,
+                          paragraph: event.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                      placeholder="Write your plain narrative text here..."
+                    />
+                  </label>
+                </>
+              )}
               {modalState.itemType === 'language' && (
                 <label className="text-sm text-slate-300">
                   Languages (one per line)
@@ -350,7 +433,7 @@ function BuilderModal({
               )}
               {modalState.mode === 'edit' && (
                 <label className="text-sm text-slate-300">
-                  Section
+                  Move to Section
                   <select
                     value={modalForm.sectionId}
                     onChange={(event) => {
@@ -359,15 +442,31 @@ function BuilderModal({
                         ...prev,
                         sectionId: nextSectionId,
                       }))
-                      const nextSection = resumeSections.find(
-                            (section) => section.id === nextSectionId,
-                          )
-                          if (nextSection?.kind) {
-                            setModalState((prev) => ({
-                              ...prev,
-                              itemType: nextSection.kind,
-                            }))
-                          }
+                      
+                      const inferKindFromTitle = (sectionTitle = '') => {
+                        const title = sectionTitle.toLowerCase().trim()
+                        if (title === 'education') return 'education'
+                        if (title === 'languages' || title === 'language') return 'language'
+                        return 'custom'
+                      }
+                      
+                      if (modalState.target === 'library') {
+                        const nextKind = librarySectionKinds[nextSectionId] || inferKindFromTitle(nextSectionId)
+                        setModalState((prev) => ({
+                          ...prev,
+                          itemType: nextKind,
+                        }))
+                      } else {
+                        const nextSection = resumeSections.find(
+                          (section) => section.id === nextSectionId,
+                        )
+                        if (nextSection?.kind) {
+                          setModalState((prev) => ({
+                            ...prev,
+                            itemType: nextSection.kind,
+                          }))
+                        }
+                      }
                     }}
                     className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
                   >

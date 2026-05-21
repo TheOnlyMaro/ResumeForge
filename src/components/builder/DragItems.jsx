@@ -202,7 +202,7 @@ export function SortableItemRow({
 }
 
 // ── Library: sortable items (within their section) ─────────────────────────
-export function LibrarySortableItem({ item }) {
+export function LibrarySortableItem({ item, onEdit, onRemove }) {
   const {
     attributes,
     listeners,
@@ -246,7 +246,29 @@ export function LibrarySortableItem({ item }) {
         </button>
         <span className="text-sm text-slate-200">{item.label}</span>
       </div>
-      <span className="text-xs text-slate-500">Drag</span>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            onEdit?.()
+          }}
+          className="rounded-full border border-slate-700 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-amber-300 hover:bg-amber-300/10 hover:text-amber-100 cursor-pointer"
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            onRemove?.()
+          }}
+          className="rounded-full border border-slate-700 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-rose-300 hover:bg-rose-500/10 hover:text-rose-100 cursor-pointer"
+        >
+          X
+        </button>
+        <span className="text-xs text-slate-500 select-none pointer-events-none">Drag</span>
+      </div>
     </div>
   )
 }
@@ -280,7 +302,7 @@ export function LibraryDraggableItem({ item }) {
 }
 
 // ── Library: sortable section card (reorder within library) ────────────────
-export function LibrarySortableSection({ title, items, active, onSelect }) {
+export function LibrarySortableSection({ title, items, active, onSelect, onEdit, onRemove }) {
   const {
     attributes,
     listeners,
@@ -328,7 +350,29 @@ export function LibrarySortableSection({ title, items, active, onSelect }) {
         </button>
         <span className="text-sm text-slate-200">{title}</span>
       </div>
-      <span className="text-xs text-slate-500">Drag</span>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            onEdit?.()
+          }}
+          className="rounded-full border border-slate-700 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-amber-300 hover:bg-amber-300/10 hover:text-amber-100 cursor-pointer"
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            onRemove?.()
+          }}
+          className="rounded-full border border-slate-700 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 transition hover:border-rose-300 hover:bg-rose-500/10 hover:text-rose-100 cursor-pointer"
+        >
+          X
+        </button>
+        <span className="text-xs text-slate-500 select-none pointer-events-none">Drag</span>
+      </div>
     </div>
   )
 }
