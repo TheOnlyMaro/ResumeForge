@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -298,6 +298,13 @@ function Builder({ onNavigate }) {
   const [activeMasterCvId, setActiveMasterCvId] = useState('')
   const [autosaveEnabled, setAutosaveEnabled] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
+  // Tracks which file IDs have unsaved in-memory edits
+  const [dirtyResumeIds, setDirtyResumeIds] = useState([])
+  const [dirtyCvIds, setDirtyCvIds] = useState([])
+  // Refs to detect active-ID changes vs real content edits in dirty-tracking effects.
+  // null = "not yet initialized" — the first run after load is always skipped.
+  const prevActiveResumeIdRef = useRef(null)
+  const prevActiveMasterCvIdRef = useRef(null)
 
   // saveWorkspace always requires explicit snapshots for all mutable data.
   // Never rely on closure-captured state to avoid cross-file seeping.
@@ -345,6 +352,9 @@ function Builder({ onNavigate }) {
     }
 
     localStorage.setItem('resume_forge_workspace_v1', JSON.stringify(workspaceState))
+    // Commit clears all dirty flags — every file in memory is now persisted
+    setDirtyResumeIds([])
+    setDirtyCvIds([])
   }
 
   const initializeDefaults = () => {
@@ -413,7 +423,14 @@ function Builder({ onNavigate }) {
 
         if (workspace.masterCvs && workspace.masterCvs.length > 0) {
           setMasterCvs(workspace.masterCvs)
-          const activeCvId = workspace.activeMasterCvId || workspace.masterCvs[0].id
+          // Prefer the file the user was last looking at (sessionStorage)
+          // over the last *saved* active file (localStorage workspace object).
+          const sessionIds = JSON.parse(sessionStorage.getItem('resume_forge_active_ids') || 'null')
+          const sessionCvId = sessionIds?.activeMasterCvId
+          const activeCvId =
+            (sessionCvId && workspace.masterCvs.find((c) => c.id === sessionCvId))
+              ? sessionCvId
+              : (workspace.activeMasterCvId || workspace.masterCvs[0].id)
           setActiveMasterCvId(activeCvId)
 
           const activeCv = workspace.masterCvs.find((c) => c.id === activeCvId)
@@ -442,7 +459,13 @@ function Builder({ onNavigate }) {
 
         if (workspace.resumes && workspace.resumes.length > 0) {
           setResumes(workspace.resumes)
-          const activeId = workspace.activeResumeId || workspace.resumes[0].id
+          // Prefer sessionStorage (last-viewed) over localStorage (last-saved)
+          const sessionIds = JSON.parse(sessionStorage.getItem('resume_forge_active_ids') || 'null')
+          const sessionResumeId = sessionIds?.activeResumeId
+          const activeId =
+            (sessionResumeId && workspace.resumes.find((r) => r.id === sessionResumeId))
+              ? sessionResumeId
+              : (workspace.activeResumeId || workspace.resumes[0].id)
           setActiveResumeId(activeId)
 
           const activeRes = workspace.resumes.find((r) => r.id === activeId)
@@ -474,9 +497,57 @@ function Builder({ onNavigate }) {
     setIsLoaded(true)
   }, [])
 
-  // Autosave triggers on state edits (only after isLoaded is set to true).
-  // Pass all snapshots explicitly so the save always captures the correct data
-  // for the correct file — never stale closure values.
+  // Keep sessionStorage in sync so refresh always returns to the last-viewed file.
+  // sessionStorage is per-tab and survives refreshes but not tab closes —
+  // perfect scope for "where I was" without polluting the saved workspace.
+  useEffect(() => {
+    if (isLoaded && activeResumeId && activeMasterCvId) {
+      sessionStorage.setItem(
+        'resume_forge_active_ids',
+        JSON.stringify({ activeResumeId, activeMasterCvId })
+      )
+    }
+  }, [isLoaded, activeResumeId, activeMasterCvId])
+
+  // Mark active resume dirty whenever its content changes (not on file-switch loads)
+  useEffect(() => {
+    if (!isLoaded) return
+    const prevId = prevActiveResumeIdRef.current
+    prevActiveResumeIdRef.current = activeResumeId
+    // null  = first run after initial load — skip (not a user edit)
+    // ID changed = file-switch load — skip
+    if (prevId === null || prevId !== activeResumeId || !activeResumeId) return
+    setDirtyResumeIds((prev) =>
+      prev.includes(activeResumeId) ? prev : [...prev, activeResumeId]
+    )
+  }, [activeResumeId, resumeSections, titleData]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Mark active Master CV dirty when its library content changes
+  useEffect(() => {
+    if (!isLoaded) return
+    const prevId = prevActiveMasterCvIdRef.current
+    prevActiveMasterCvIdRef.current = activeMasterCvId
+    if (prevId === null || prevId !== activeMasterCvId || !activeMasterCvId) return
+    setDirtyCvIds((prev) =>
+      prev.includes(activeMasterCvId) ? prev : [...prev, activeMasterCvId]
+    )
+  }, [activeMasterCvId, librarySections, libraryItems]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Warn user before closing / refreshing if any file has unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (dirtyResumeIds.length > 0 || dirtyCvIds.length > 0) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [dirtyResumeIds, dirtyCvIds])
+
+  // Autosave — declared AFTER dirty tracking so its setDirtyResumeIds([]) is
+  // queued last in React's batch and wins over the dirty-tracking functional update.
+  // Net result: edit with autosave ON → content saved → dirty flag cleared. ✅
   useEffect(() => {
     if (isLoaded && autosaveEnabled) {
       saveWorkspace({
@@ -513,20 +584,17 @@ function Builder({ onNavigate }) {
     const outgoingTitle = titleData
 
     setResumes((prevResumes) => {
-      // Flush outgoing file's current edits into the array
+      // Flush outgoing file's edits into the in-memory array only — NOT localStorage.
+      // This preserves A* while you work on B, but won't survive a refresh.
       const updated = prevResumes.map((r) => {
         if (r.id === activeResumeId) {
-          return {
-            ...r,
-            resumeSections: outgoingSections,
-            titleData: outgoingTitle,
-            updatedAt: Date.now(),
-          }
+          return { ...r, resumeSections: outgoingSections, titleData: outgoingTitle }
+          // Note: no updatedAt — only real saves should move the timestamp
         }
         return r
       })
 
-      // Load incoming file's data
+      // Load the incoming file's data into live state
       const targetResume = updated.find((r) => r.id === newId)
       const incomingSections = targetResume?.resumeSections ?? []
       const incomingTitle = targetResume?.titleData ?? { name: '', subtitle: '', contacts: [] }
@@ -534,24 +602,12 @@ function Builder({ onNavigate }) {
       setResumeSections(incomingSections)
       setTitleData(incomingTitle)
 
-      // Save with explicit snapshots — incoming data for incoming ID, outgoing already flushed
-      saveWorkspace({
-        resumesList: updated,
-        activeId: newId,
-        activeSections: incomingSections,
-        activeTitleData: incomingTitle,
-        masterCvsList: masterCvs,
-        activeCvId: activeMasterCvId,
-        activeLibrarySections: librarySections,
-        activeLibraryItems: libraryItems,
-        autosave: autosaveEnabled,
-      })
-
+      // No saveWorkspace call — switching is purely in-memory
       return updated
     })
     setActiveResumeId(newId)
     const targetName = resumes.find((r) => r.id === newId)?.name || 'selected resume'
-    showDismissNotice(`Switched active resume to "${targetName}"!`)
+    showDismissNotice(`Switched to "${targetName}"`)
   }
 
   const switchActiveMasterCv = (newId) => {
@@ -562,20 +618,16 @@ function Builder({ onNavigate }) {
     const outgoingLibraryItems = libraryItems
 
     setMasterCvs((prevCvs) => {
-      // Flush outgoing CV's current edits
+      // Flush outgoing CV's edits into the in-memory array only — NOT localStorage
       const updated = prevCvs.map((cv) => {
         if (cv.id === activeMasterCvId) {
-          return {
-            ...cv,
-            librarySections: outgoingLibrarySections,
-            libraryItems: outgoingLibraryItems,
-            updatedAt: Date.now(),
-          }
+          return { ...cv, librarySections: outgoingLibrarySections, libraryItems: outgoingLibraryItems }
+          // Note: no updatedAt — only real saves move the timestamp
         }
         return cv
       })
 
-      // Load incoming CV's data
+      // Load the incoming CV's data into live state
       const targetCv = updated.find((cv) => cv.id === newId)
       const incomingLibSections = targetCv?.librarySections ?? []
       const incomingLibItems = targetCv?.libraryItems ?? {}
@@ -586,24 +638,12 @@ function Builder({ onNavigate }) {
         setLibraryActiveSection(incomingLibSections[0])
       }
 
-      // Save with explicit snapshots
-      saveWorkspace({
-        resumesList: resumes,
-        activeId: activeResumeId,
-        activeSections: resumeSections,
-        activeTitleData: titleData,
-        masterCvsList: updated,
-        activeCvId: newId,
-        activeLibrarySections: incomingLibSections,
-        activeLibraryItems: incomingLibItems,
-        autosave: autosaveEnabled,
-      })
-
+      // No saveWorkspace call — switching is purely in-memory
       return updated
     })
     setActiveMasterCvId(newId)
     const targetName = masterCvs.find((cv) => cv.id === newId)?.name || 'selected Master CV'
-    showDismissNotice(`Switched active Master CV to "${targetName}"!`)
+    showDismissNotice(`Switched to "${targetName}"`)
   }
 
   const renameResume = (id, currentName) => {
@@ -2257,6 +2297,8 @@ function Builder({ onNavigate }) {
           onManualSave={handleManualSave}
           onImportJson={triggerJsonImport}
           onExportJson={triggerJsonExport}
+          dirtyResumeIds={dirtyResumeIds}
+          dirtyCvIds={dirtyCvIds}
         />
 
         <DndContext

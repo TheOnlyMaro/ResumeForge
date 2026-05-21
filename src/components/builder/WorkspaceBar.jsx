@@ -20,6 +20,8 @@ function WorkspaceBar({
   onManualSave,
   onImportJson,
   onExportJson,
+  dirtyResumeIds = [],
+  dirtyCvIds = [],
 }) {
   const [showResumeActions, setShowResumeActions] = useState(false)
   const [showCvActions, setShowCvActions] = useState(false)
@@ -48,7 +50,7 @@ function WorkspaceBar({
                 >
                   {resumes.map((r) => (
                     <option key={r.id} value={r.id}>
-                      {r.name}
+                      {dirtyResumeIds.includes(r.id) ? `● ${r.name}` : r.name}
                     </option>
                   ))}
                 </select>
@@ -126,6 +128,9 @@ function WorkspaceBar({
                 )}
               </div>
             </div>
+            {dirtyResumeIds.includes(activeResumeId) && (
+              <span className="text-[10px] font-bold text-amber-500">● unsaved</span>
+            )}
           </div>
 
           <span className="hidden h-8 w-px bg-slate-800 md:block" />
@@ -144,7 +149,7 @@ function WorkspaceBar({
                 >
                   {masterCvs.map((cv) => (
                     <option key={cv.id} value={cv.id}>
-                      {cv.name}
+                      {dirtyCvIds.includes(cv.id) ? `● ${cv.name}` : cv.name}
                     </option>
                   ))}
                 </select>
@@ -202,6 +207,9 @@ function WorkspaceBar({
                 )}
               </div>
             </div>
+            {dirtyCvIds.includes(activeMasterCvId) && (
+              <span className="text-[10px] font-bold text-amber-500">● unsaved</span>
+            )}
           </div>
 
         </div>
