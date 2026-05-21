@@ -15,6 +15,13 @@ import LibraryPanel from './components/builder/LibraryPanel'
 import LivePdfPanel from './components/builder/LivePdfPanel'
 import ResumePanel from './components/builder/ResumePanel'
 import WorkspaceBar from './components/builder/WorkspaceBar'
+import mockData from './data/mockData.json'
+
+const DEFAULT_RESUME_SECTIONS = JSON.parse(JSON.stringify(mockData.DEFAULT_RESUME_SECTIONS))
+const DEFAULT_LIBRARY_SECTIONS = JSON.parse(JSON.stringify(mockData.DEFAULT_LIBRARY_SECTIONS))
+const DEFAULT_LIBRARY_SECTION_KINDS = JSON.parse(JSON.stringify(mockData.DEFAULT_LIBRARY_SECTION_KINDS))
+const DEFAULT_LIBRARY_ITEMS = JSON.parse(JSON.stringify(mockData.DEFAULT_LIBRARY_ITEMS))
+const DEFAULT_TITLE_DATA = JSON.parse(JSON.stringify(mockData.DEFAULT_TITLE_DATA))
 
 let idCounter = 0
 const generateId = (prefix) => {
@@ -23,254 +30,13 @@ const generateId = (prefix) => {
   return `${prefix}-${Date.now()}-${idCounter}-${randomPart}`
 }
 
-const DEFAULT_RESUME_SECTIONS = [
-  {
-    id: 'education',
-    title: 'Education',
-    kind: 'education',
-    items: [
-      {
-        id: 'edu-1',
-        type: 'education',
-        label: 'School of Design - Harvard University',
-        degree: 'School of Design',
-        school: 'Harvard University',
-        location: 'Cambridge, MA',
-        field: 'B.Sc. in Visual Communication',
-        dates: '2016 - 2020',
-        bullets: ['Honors thesis on accessible product systems'],
-        enabled: true,
-      },
-    ],
-  },
-  {
-    id: 'experience',
-    title: 'Experience',
-    kind: 'custom',
-    items: [
-      {
-        id: 'exp-1',
-        type: 'custom',
-        label: 'Lead Product Designer',
-        name: 'Lead Product Designer',
-        location: 'Remote',
-        subtitle: 'Forge Studio',
-        dates: '2022 - Present',
-        details: [
-          'Designed 12 resume templates used by 40k+ job seekers.',
-          'Reduced editing time by 45% with modular section controls.',
-        ],
-        enabled: true,
-      },
-    ],
-  },
-]
-
-const DEFAULT_LIBRARY_SECTIONS = ['Experience', 'Projects', 'Skills']
-
-const DEFAULT_LIBRARY_ITEMS = {
-  Experience: [
-    {
-      id: 'lib-exp-1',
-      type: 'custom',
-      label: 'Portfolio review',
-      subtitle: 'Forge Studio',
-      location: 'Remote',
-      dates: '2022 - Present',
-      details: ['Led product review sessions', 'Improved UX clarity'],
-    },
-    {
-      id: 'lib-exp-2',
-      type: 'custom',
-      label: 'Leadership',
-      subtitle: 'Design Guild',
-      location: 'Boston, MA',
-      dates: '2020 - 2022',
-      details: ['Mentored junior designers', 'Ran weekly crits'],
-    },
-    {
-      id: 'lib-exp-3',
-      type: 'custom',
-      label: 'Optimization',
-      subtitle: 'Sprint Ops',
-      location: 'Austin, TX',
-      dates: '2019 - 2020',
-      details: ['Reduced handoff time by 20%'],
-    },
-  ],
-  Projects: [
-    {
-      id: 'lib-proj-1',
-      type: 'custom',
-      label: 'Case study',
-      subtitle: 'Mobile onboarding',
-      location: 'Remote',
-      dates: '2023',
-      details: ['Boosted conversion by 12%'],
-    },
-    {
-      id: 'lib-proj-2',
-      type: 'custom',
-      label: 'Product launch',
-      subtitle: 'B2B dashboard',
-      location: 'Remote',
-      dates: '2022',
-      details: ['Shipped MVP in 6 weeks'],
-    },
-  ],
-  Skills: [
-    {
-      id: 'lib-skill-1',
-      type: 'custom',
-      label: 'Design systems',
-      subtitle: '',
-      location: '',
-      dates: '',
-      details: ['Tokens, components, accessibility'],
-    },
-    {
-      id: 'lib-skill-2',
-      type: 'custom',
-      label: 'User research',
-      subtitle: '',
-      location: '',
-      dates: '',
-      details: ['Interviews, surveys, synthesis'],
-    },
-  ],
-}
-
-const DEFAULT_TITLE_DATA = {
-  name: defaultResume.name,
-  subtitle: defaultResume.subtitle,
-  contacts: defaultResume.contacts.map((entry) => ({ ...entry })),
-}
-
 function Builder({ onNavigate }) {
-  const [resumeSections, setResumeSections] = useState([
-    {
-      id: 'education',
-      title: 'Education',
-      kind: 'education',
-      items: [
-        {
-          id: 'edu-1',
-          type: 'education',
-          label: 'School of Design - Harvard University',
-          degree: 'School of Design',
-          school: 'Harvard University',
-          location: 'Cambridge, MA',
-          field: 'B.Sc. in Visual Communication',
-          dates: '2016 - 2020',
-          bullets: ['Honors thesis on accessible product systems'],
-          enabled: true,
-        },
-      ],
-    },
-    {
-      id: 'experience',
-      title: 'Experience',
-      kind: 'custom',
-      items: [
-        {
-          id: 'exp-1',
-          type: 'custom',
-          label: 'Lead Product Designer',
-          name: 'Lead Product Designer',
-          location: 'Remote',
-          subtitle: 'Forge Studio',
-          dates: '2022 - Present',
-          details: [
-            'Designed 12 resume templates used by 40k+ job seekers.',
-            'Reduced editing time by 45% with modular section controls.',
-          ],
-          enabled: true,
-        },
-      ],
-    },
-  ])
-  const [titleData, setTitleData] = useState({
-    name: defaultResume.name,
-    subtitle: defaultResume.subtitle,
-    contacts: defaultResume.contacts.map((entry) => ({ ...entry })),
-  })
-  const [librarySections, setLibrarySections] = useState([
-    'Experience',
-    'Projects',
-    'Skills',
-  ])
-  const [libraryItems, setLibraryItems] = useState({
-    Experience: [
-      {
-        id: 'lib-exp-1',
-        type: 'custom',
-        label: 'Portfolio review',
-        subtitle: 'Forge Studio',
-        location: 'Remote',
-        dates: '2022 - Present',
-        details: ['Led product review sessions', 'Improved UX clarity'],
-      },
-      {
-        id: 'lib-exp-2',
-        type: 'custom',
-        label: 'Leadership',
-        subtitle: 'Design Guild',
-        location: 'Boston, MA',
-        dates: '2020 - 2022',
-        details: ['Mentored junior designers', 'Ran weekly crits'],
-      },
-      {
-        id: 'lib-exp-3',
-        type: 'custom',
-        label: 'Optimization',
-        subtitle: 'Sprint Ops',
-        location: 'Austin, TX',
-        dates: '2019 - 2020',
-        details: ['Reduced handoff time by 20%'],
-      },
-    ],
-    Projects: [
-      {
-        id: 'lib-proj-1',
-        type: 'custom',
-        label: 'Case study',
-        subtitle: 'Mobile onboarding',
-        location: 'Remote',
-        dates: '2023',
-        details: ['Boosted conversion by 12%'],
-      },
-      {
-        id: 'lib-proj-2',
-        type: 'custom',
-        label: 'Product launch',
-        subtitle: 'B2B dashboard',
-        location: 'Remote',
-        dates: '2022',
-        details: ['Shipped MVP in 6 weeks'],
-      },
-    ],
-    Skills: [
-      {
-        id: 'lib-skill-1',
-        type: 'custom',
-        label: 'Design systems',
-        subtitle: '',
-        location: '',
-        dates: '',
-        details: ['Tokens, components, accessibility'],
-      },
-      {
-        id: 'lib-skill-2',
-        type: 'custom',
-        label: 'User research',
-        subtitle: '',
-        location: '',
-        dates: '',
-        details: ['Interviews, surveys, synthesis'],
-      },
-    ],
-  })
-  const [libraryActiveSection, setLibraryActiveSection] = useState('Experience')
+  const [resumeSections, setResumeSections] = useState(DEFAULT_RESUME_SECTIONS)
+  const [titleData, setTitleData] = useState(DEFAULT_TITLE_DATA)
+  const [libraryTitleData, setLibraryTitleData] = useState(DEFAULT_TITLE_DATA)
+  const [librarySections, setLibrarySections] = useState(DEFAULT_LIBRARY_SECTIONS)
+  const [libraryItems, setLibraryItems] = useState(DEFAULT_LIBRARY_ITEMS)
+  const [libraryActiveSection, setLibraryActiveSection] = useState(DEFAULT_LIBRARY_SECTIONS[0])
   const [modalState, setModalState] = useState({
     open: false,
     mode: 'add',
@@ -301,7 +67,7 @@ function Builder({ onNavigate }) {
   const [activeResumeId, setActiveResumeId] = useState('')
   const [masterCvs, setMasterCvs] = useState([])
   const [activeMasterCvId, setActiveMasterCvId] = useState('')
-  const [librarySectionKinds, setLibrarySectionKinds] = useState({})
+  const [librarySectionKinds, setLibrarySectionKinds] = useState(DEFAULT_LIBRARY_SECTION_KINDS)
   const [autosaveEnabled, setAutosaveEnabled] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   // Tracks which file IDs have unsaved in-memory edits
@@ -324,6 +90,7 @@ function Builder({ onNavigate }) {
     activeLibrarySections = librarySections,
     activeLibraryItems = libraryItems,
     activeLibrarySectionKinds = librarySectionKinds,
+    activeLibraryTitleData = libraryTitleData,
     autosave = autosaveEnabled,
   } = {}) => {
     const updatedResumes = resumesList.map((r) => {
@@ -345,6 +112,7 @@ function Builder({ onNavigate }) {
           librarySections: activeLibrarySections,
           libraryItems: activeLibraryItems,
           librarySectionKinds: activeLibrarySectionKinds,
+          titleData: activeLibraryTitleData,
           updatedAt: Date.now(),
         }
       }
@@ -359,7 +127,7 @@ function Builder({ onNavigate }) {
       masterCvs: updatedMasterCvs,
     }
 
-    localStorage.setItem('resume_forge_workspace_v1', JSON.stringify(workspaceState))
+    localStorage.setItem('resume_forge_workspace_v2', JSON.stringify(workspaceState))
     // Commit clears all dirty flags — every file in memory is now persisted
     setDirtyResumeIds([])
     setDirtyCvIds([])
@@ -373,6 +141,8 @@ function Builder({ onNavigate }) {
       updatedAt: Date.now(),
       librarySections: DEFAULT_LIBRARY_SECTIONS,
       libraryItems: DEFAULT_LIBRARY_ITEMS,
+      librarySectionKinds: DEFAULT_LIBRARY_SECTION_KINDS,
+      titleData: DEFAULT_TITLE_DATA,
     }
     const defaultRes1 = {
       id: 'resume-1',
@@ -388,9 +158,13 @@ function Builder({ onNavigate }) {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       titleData: {
-        name: 'Maro (Software Engineer)',
+        name: 'Maro Forge (Software Engineer)',
         subtitle: 'Lead Software Engineer',
-        contacts: defaultResume.contacts.map((entry) => ({ ...entry })),
+        contacts: [
+          { label: 'maro.software@resumeforge.dev', link: '' },
+          { label: 'linkedin.com/in/maroforge', link: '' },
+          { label: 'San Francisco, CA', link: '' },
+        ],
       },
       resumeSections: DEFAULT_RESUME_SECTIONS,
     }
@@ -412,15 +186,17 @@ function Builder({ onNavigate }) {
     setActiveMasterCvId('cv-1')
     setLibrarySections(DEFAULT_LIBRARY_SECTIONS)
     setLibraryItems(DEFAULT_LIBRARY_ITEMS)
+    setLibrarySectionKinds(DEFAULT_LIBRARY_SECTION_KINDS)
+    setLibraryTitleData(DEFAULT_TITLE_DATA)
     setLibraryActiveSection(DEFAULT_LIBRARY_SECTIONS[0])
 
     setAutosaveEnabled(false)
-    localStorage.setItem('resume_forge_workspace_v1', JSON.stringify(initialWorkspace))
+    localStorage.setItem('resume_forge_workspace_v2', JSON.stringify(initialWorkspace))
   }
 
   // Load state from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('resume_forge_workspace_v1')
+    const saved = localStorage.getItem('resume_forge_workspace_v2')
     if (saved) {
       try {
         const workspace = JSON.parse(saved)
@@ -445,7 +221,8 @@ function Builder({ onNavigate }) {
           if (activeCv) {
             setLibrarySections(activeCv.librarySections || [])
             setLibraryItems(activeCv.libraryItems || {})
-            setLibrarySectionKinds(activeCv.librarySectionKinds || {})
+            setLibrarySectionKinds(activeCv.librarySectionKinds || DEFAULT_LIBRARY_SECTION_KINDS)
+            setLibraryTitleData(activeCv.titleData || DEFAULT_TITLE_DATA)
             if (activeCv.librarySections && activeCv.librarySections.length > 0) {
               setLibraryActiveSection(activeCv.librarySections[0])
             }
@@ -458,21 +235,15 @@ function Builder({ onNavigate }) {
             updatedAt: Date.now(),
             librarySections: DEFAULT_LIBRARY_SECTIONS,
             libraryItems: DEFAULT_LIBRARY_ITEMS,
-            librarySectionKinds: {
-              Experience: 'custom',
-              Projects: 'custom',
-              Skills: 'custom',
-            },
+            librarySectionKinds: DEFAULT_LIBRARY_SECTION_KINDS,
+            titleData: DEFAULT_TITLE_DATA,
           }
           setMasterCvs([defaultCv])
           setActiveMasterCvId('cv-1')
           setLibrarySections(DEFAULT_LIBRARY_SECTIONS)
           setLibraryItems(DEFAULT_LIBRARY_ITEMS)
-          setLibrarySectionKinds({
-            Experience: 'custom',
-            Projects: 'custom',
-            Skills: 'custom',
-          })
+          setLibrarySectionKinds(DEFAULT_LIBRARY_SECTION_KINDS)
+          setLibraryTitleData(DEFAULT_TITLE_DATA)
           setLibraryActiveSection(DEFAULT_LIBRARY_SECTIONS[0])
         }
 
@@ -550,7 +321,7 @@ function Builder({ onNavigate }) {
     setDirtyCvIds((prev) =>
       prev.includes(activeMasterCvId) ? prev : [...prev, activeMasterCvId]
     )
-  }, [activeMasterCvId, librarySections, libraryItems, librarySectionKinds]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeMasterCvId, librarySections, libraryItems, librarySectionKinds, libraryTitleData]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Warn user before closing / refreshing if any file has unsaved changes
   useEffect(() => {
@@ -579,6 +350,7 @@ function Builder({ onNavigate }) {
         activeLibrarySections: librarySections,
         activeLibraryItems: libraryItems,
         activeLibrarySectionKinds: librarySectionKinds,
+        activeLibraryTitleData: libraryTitleData,
         autosave: autosaveEnabled,
       })
     }
@@ -590,6 +362,7 @@ function Builder({ onNavigate }) {
     librarySections,
     libraryItems,
     librarySectionKinds,
+    libraryTitleData,
     resumes,
     masterCvs,
     activeResumeId,
@@ -638,6 +411,7 @@ function Builder({ onNavigate }) {
     const outgoingLibrarySections = librarySections
     const outgoingLibraryItems = libraryItems
     const outgoingLibrarySectionKinds = librarySectionKinds
+    const outgoingLibraryTitleData = libraryTitleData
 
     setMasterCvs((prevCvs) => {
       // Flush outgoing CV's edits into the in-memory array only — NOT localStorage
@@ -648,6 +422,7 @@ function Builder({ onNavigate }) {
             librarySections: outgoingLibrarySections,
             libraryItems: outgoingLibraryItems,
             librarySectionKinds: outgoingLibrarySectionKinds,
+            titleData: outgoingLibraryTitleData,
           }
           // Note: no updatedAt — only real saves move the timestamp
         }
@@ -659,10 +434,12 @@ function Builder({ onNavigate }) {
       const incomingLibSections = targetCv?.librarySections ?? []
       const incomingLibItems = targetCv?.libraryItems ?? {}
       const incomingLibSectionKinds = targetCv?.librarySectionKinds ?? {}
+      const incomingLibTitleData = targetCv?.titleData ?? DEFAULT_TITLE_DATA
 
       setLibrarySections(incomingLibSections)
       setLibraryItems(incomingLibItems)
       setLibrarySectionKinds(incomingLibSectionKinds)
+      setLibraryTitleData(incomingLibTitleData)
       if (incomingLibSections.length > 0) {
         setLibraryActiveSection(incomingLibSections[0])
       }
@@ -697,6 +474,8 @@ function Builder({ onNavigate }) {
             activeCvId: activeMasterCvId,
             activeLibrarySections: librarySections,
             activeLibraryItems: libraryItems,
+            activeLibrarySectionKinds: librarySectionKinds,
+            activeLibraryTitleData: libraryTitleData,
             autosave: autosaveEnabled,
           })
           return updated
@@ -728,6 +507,8 @@ function Builder({ onNavigate }) {
             activeCvId: activeMasterCvId,
             activeLibrarySections: librarySections,
             activeLibraryItems: libraryItems,
+            activeLibrarySectionKinds: librarySectionKinds,
+            activeLibraryTitleData: libraryTitleData,
             autosave: autosaveEnabled,
           })
           return updated
@@ -778,6 +559,8 @@ function Builder({ onNavigate }) {
             activeCvId: activeMasterCvId,
             activeLibrarySections: librarySections,
             activeLibraryItems: libraryItems,
+            activeLibrarySectionKinds: librarySectionKinds,
+            activeLibraryTitleData: libraryTitleData,
             autosave: autosaveEnabled,
           })
           return updated
@@ -810,13 +593,19 @@ function Builder({ onNavigate }) {
           let nextActiveCvId = activeMasterCvId
           let nextLibSections = librarySections
           let nextLibItems = libraryItems
+          let nextLibSectionKinds = librarySectionKinds
+          let nextLibTitleData = libraryTitleData
           if (id === activeMasterCvId) {
             nextActiveCvId = updated[0].id
             const nextCv = updated[0]
             nextLibSections = nextCv.librarySections || []
             nextLibItems = nextCv.libraryItems || {}
+            nextLibSectionKinds = nextCv.librarySectionKinds || {}
+            nextLibTitleData = nextCv.titleData || DEFAULT_TITLE_DATA
             setLibrarySections(nextLibSections)
             setLibraryItems(nextLibItems)
+            setLibrarySectionKinds(nextLibSectionKinds)
+            setLibraryTitleData(nextLibTitleData)
             if (nextLibSections.length > 0) {
               setLibraryActiveSection(nextLibSections[0])
             }
@@ -831,6 +620,8 @@ function Builder({ onNavigate }) {
             activeCvId: nextActiveCvId,
             activeLibrarySections: nextLibSections,
             activeLibraryItems: nextLibItems,
+            activeLibrarySectionKinds: nextLibSectionKinds,
+            activeLibraryTitleData: nextLibTitleData,
             autosave: autosaveEnabled,
           })
           return updated
@@ -868,6 +659,8 @@ function Builder({ onNavigate }) {
         activeCvId: activeMasterCvId,
         activeLibrarySections: librarySections,
         activeLibraryItems: libraryItems,
+        activeLibrarySectionKinds: librarySectionKinds,
+        activeLibraryTitleData: libraryTitleData,
         autosave: autosaveEnabled,
       })
       return updated
@@ -902,6 +695,8 @@ function Builder({ onNavigate }) {
         activeCvId: activeMasterCvId,
         activeLibrarySections: librarySections,
         activeLibraryItems: libraryItems,
+        activeLibrarySectionKinds: librarySectionKinds,
+        activeLibraryTitleData: libraryTitleData,
         autosave: autosaveEnabled,
       })
       return updated
@@ -915,7 +710,7 @@ function Builder({ onNavigate }) {
 
     const newSections = (activeCv.librarySections || []).map((sectionTitle) => {
       const items = activeCv.libraryItems[sectionTitle] || []
-      const kind = inferKindFromTitle(sectionTitle)
+      const kind = activeCv.librarySectionKinds?.[sectionTitle] || inferKindFromTitle(sectionTitle)
       return {
         id: generateId('section'),
         title: sectionTitle,
@@ -929,11 +724,7 @@ function Builder({ onNavigate }) {
       name: `Resume from Master CV (${resumes.length + 1})`,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      titleData: {
-        name: 'Your Name',
-        subtitle: 'Your Professional Title',
-        contacts: [],
-      },
+      titleData: JSON.parse(JSON.stringify(activeCv.titleData || DEFAULT_TITLE_DATA)),
       resumeSections: newSections,
     }
     setResumes((prev) => {
@@ -950,6 +741,8 @@ function Builder({ onNavigate }) {
         activeCvId: activeMasterCvId,
         activeLibrarySections: librarySections,
         activeLibraryItems: libraryItems,
+        activeLibrarySectionKinds: librarySectionKinds,
+        activeLibraryTitleData: libraryTitleData,
         autosave: autosaveEnabled,
       })
       return updated
@@ -963,24 +756,18 @@ function Builder({ onNavigate }) {
       name: `Untitled Master CV (${masterCvs.length + 1})`,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      librarySections: ['Experience', 'Projects', 'Skills'],
-      libraryItems: {
-        Experience: [],
-        Projects: [],
-        Skills: [],
-      },
-      librarySectionKinds: {
-        Experience: 'custom',
-        Projects: 'custom',
-        Skills: 'custom',
-      },
+      librarySections: DEFAULT_LIBRARY_SECTIONS,
+      libraryItems: JSON.parse(JSON.stringify(DEFAULT_LIBRARY_ITEMS)),
+      librarySectionKinds: DEFAULT_LIBRARY_SECTION_KINDS,
+      titleData: DEFAULT_TITLE_DATA,
     }
     setMasterCvs((prev) => {
       const updated = [...prev, newCv]
       setLibrarySections(newCv.librarySections)
       setLibraryItems(newCv.libraryItems)
       setLibrarySectionKinds(newCv.librarySectionKinds)
-      setLibraryActiveSection('Experience')
+      setLibraryTitleData(newCv.titleData)
+      setLibraryActiveSection(newCv.librarySections[0])
       setActiveMasterCvId(newCv.id)
       saveWorkspace({
         resumesList: resumes,
@@ -992,6 +779,7 @@ function Builder({ onNavigate }) {
         activeLibrarySections: newCv.librarySections,
         activeLibraryItems: newCv.libraryItems,
         activeLibrarySectionKinds: newCv.librarySectionKinds,
+        activeLibraryTitleData: newCv.titleData,
         autosave: autosaveEnabled,
       })
       return updated
@@ -1011,6 +799,8 @@ function Builder({ onNavigate }) {
       activeCvId: activeMasterCvId,
       activeLibrarySections: librarySections,
       activeLibraryItems: libraryItems,
+      activeLibrarySectionKinds: librarySectionKinds,
+      activeLibraryTitleData: libraryTitleData,
       autosave: nextVal,
     })
     showDismissNotice(`Autosave is now turned ${nextVal ? 'ON' : 'OFF'}!`)
@@ -1026,6 +816,8 @@ function Builder({ onNavigate }) {
       activeCvId: activeMasterCvId,
       activeLibrarySections: librarySections,
       activeLibraryItems: libraryItems,
+      activeLibrarySectionKinds: librarySectionKinds,
+      activeLibraryTitleData: libraryTitleData,
       autosave: autosaveEnabled,
     })
     showDismissNotice('All changes manually saved to local storage!')
@@ -1072,7 +864,7 @@ function Builder({ onNavigate }) {
                     setResumeSections(newResume.resumeSections)
                     setTitleData(newResume.titleData)
                     setActiveResumeId(newResume.id)
-                    saveWorkspace({ resumesList: updated, activeId: newResume.id, activeSections: newResume.resumeSections, activeTitleData: newResume.titleData, masterCvsList: masterCvs, activeCvId: activeMasterCvId, activeLibrarySections: librarySections, activeLibraryItems: libraryItems, autosave: autosaveEnabled })
+                    saveWorkspace({ resumesList: updated, activeId: newResume.id, activeSections: newResume.resumeSections, activeTitleData: newResume.titleData, masterCvsList: masterCvs, activeCvId: activeMasterCvId, activeLibrarySections: librarySections, activeLibraryItems: libraryItems, activeLibrarySectionKinds: librarySectionKinds, activeLibraryTitleData: libraryTitleData, autosave: autosaveEnabled })
                     return updated
                   })
                   showDismissNotice(`Imported new Resume “${newResume.name}”!`)
@@ -1081,7 +873,7 @@ function Builder({ onNavigate }) {
                   setTitleData(parsed.titleData)
                   setResumes((prev) => {
                     const updated = prev.map((r) => r.id === activeResumeId ? { ...r, name: parsed.name || r.name, updatedAt: Date.now(), resumeSections: parsed.resumeSections, titleData: parsed.titleData } : r)
-                    saveWorkspace({ resumesList: updated, activeId: activeResumeId, activeSections: parsed.resumeSections, activeTitleData: parsed.titleData, masterCvsList: masterCvs, activeCvId: activeMasterCvId, activeLibrarySections: librarySections, activeLibraryItems: libraryItems, autosave: autosaveEnabled })
+                    saveWorkspace({ resumesList: updated, activeId: activeResumeId, activeSections: parsed.resumeSections, activeTitleData: parsed.titleData, masterCvsList: masterCvs, activeCvId: activeMasterCvId, activeLibrarySections: librarySections, activeLibraryItems: libraryItems, activeLibrarySectionKinds: librarySectionKinds, activeLibraryTitleData: libraryTitleData, autosave: autosaveEnabled })
                     return updated
                   })
                   showDismissNotice('Successfully overwrote active Resume!')
@@ -1111,6 +903,7 @@ function Builder({ onNavigate }) {
                     incomingSectionKinds[s] = firstItem?.type ?? inferKindFromTitle(s)
                   }
                 })
+                const incomingTitleData = parsed.titleData || parsed.libraryTitleData || DEFAULT_TITLE_DATA
 
                 if (choice === 'new') {
                   const newCv = {
@@ -1121,15 +914,17 @@ function Builder({ onNavigate }) {
                     librarySections: parsed.librarySections,
                     libraryItems: parsed.libraryItems,
                     librarySectionKinds: incomingSectionKinds,
+                    titleData: incomingTitleData,
                   }
                   setMasterCvs((prev) => {
                     const updated = [...prev, newCv]
                     setLibrarySections(newCv.librarySections)
                     setLibraryItems(newCv.libraryItems)
                     setLibrarySectionKinds(newCv.librarySectionKinds)
+                    setLibraryTitleData(newCv.titleData)
                     if (newCv.librarySections?.length > 0) setLibraryActiveSection(newCv.librarySections[0])
                     setActiveMasterCvId(newCv.id)
-                    saveWorkspace({ resumesList: resumes, activeId: activeResumeId, activeSections: resumeSections, activeTitleData: titleData, masterCvsList: updated, activeCvId: newCv.id, activeLibrarySections: newCv.librarySections, activeLibraryItems: newCv.libraryItems, activeLibrarySectionKinds: newCv.librarySectionKinds, autosave: autosaveEnabled })
+                    saveWorkspace({ resumesList: resumes, activeId: activeResumeId, activeSections: resumeSections, activeTitleData: titleData, masterCvsList: updated, activeCvId: newCv.id, activeLibrarySections: newCv.librarySections, activeLibraryItems: newCv.libraryItems, activeLibrarySectionKinds: newCv.librarySectionKinds, activeLibraryTitleData: newCv.titleData, autosave: autosaveEnabled })
                     return updated
                   })
                   showDismissNotice(`Imported new Master CV “${newCv.name}”!`)
@@ -1137,10 +932,11 @@ function Builder({ onNavigate }) {
                   setLibrarySections(parsed.librarySections)
                   setLibraryItems(parsed.libraryItems)
                   setLibrarySectionKinds(incomingSectionKinds)
+                  setLibraryTitleData(incomingTitleData)
                   if (parsed.librarySections?.length > 0) setLibraryActiveSection(parsed.librarySections[0])
                   setMasterCvs((prev) => {
-                    const updated = prev.map((cv) => cv.id === activeMasterCvId ? { ...cv, name: parsed.name || cv.name, updatedAt: Date.now(), librarySections: parsed.librarySections, libraryItems: parsed.libraryItems, librarySectionKinds: incomingSectionKinds } : cv)
-                    saveWorkspace({ resumesList: resumes, activeId: activeResumeId, activeSections: resumeSections, activeTitleData: titleData, masterCvsList: updated, activeCvId: activeMasterCvId, activeLibrarySections: parsed.librarySections, activeLibraryItems: parsed.libraryItems, activeLibrarySectionKinds: incomingSectionKinds, autosave: autosaveEnabled })
+                    const updated = prev.map((cv) => cv.id === activeMasterCvId ? { ...cv, name: parsed.name || cv.name, updatedAt: Date.now(), librarySections: parsed.librarySections, libraryItems: parsed.libraryItems, librarySectionKinds: incomingSectionKinds, titleData: incomingTitleData } : cv)
+                    saveWorkspace({ resumesList: resumes, activeId: activeResumeId, activeSections: resumeSections, activeTitleData: titleData, masterCvsList: updated, activeCvId: activeMasterCvId, activeLibrarySections: parsed.librarySections, activeLibraryItems: parsed.libraryItems, activeLibrarySectionKinds: incomingSectionKinds, activeLibraryTitleData: incomingTitleData, autosave: autosaveEnabled })
                     return updated
                   })
                   showDismissNotice('Successfully overwrote active Master CV!')
@@ -1181,7 +977,7 @@ function Builder({ onNavigate }) {
           filename = `${activeRes.name || 'resume'}.json`
         } else {
           if (!activeCv) { showDialog({ type: 'alert', variant: 'error', title: 'Export Error', message: 'No active Master CV found to export.' }); return }
-          dataToExport = { fileType: 'resume_forge_master_cv', version: 1, name: activeCv.name, createdAt: activeCv.createdAt, updatedAt: Date.now(), librarySections, libraryItems, librarySectionKinds }
+          dataToExport = { fileType: 'resume_forge_master_cv', version: 1, name: activeCv.name, createdAt: activeCv.createdAt, updatedAt: Date.now(), librarySections, libraryItems, librarySectionKinds, titleData: libraryTitleData }
           filename = `${activeCv.name || 'master_cv'}.json`
         }
         const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' })
@@ -1588,19 +1384,21 @@ function Builder({ onNavigate }) {
     })
   }
 
-  const openEditTitle = () => {
+  const openEditTitle = (targetArg = 'resume') => {
+    const target = targetArg === 'library' ? 'library' : 'resume'
+    const activeTitleData = target === 'library' ? libraryTitleData : titleData
     setModalForm((prev) => ({
       ...prev,
-      name: titleData.name,
-      subtitle: titleData.subtitle,
+      name: activeTitleData.name,
+      subtitle: activeTitleData.subtitle,
       contacts:
-        titleData.contacts?.map((entry) => ({ ...entry })) ?? prev.contacts,
+        activeTitleData.contacts?.map((entry) => ({ ...entry })) ?? prev.contacts,
     }))
     setModalState({
       open: true,
       mode: 'edit',
       type: 'title',
-      target: 'resume',
+      target,
       itemType: 'custom',
       sectionId: null,
       itemId: null,
@@ -1636,16 +1434,23 @@ function Builder({ onNavigate }) {
   const handleModalSubmit = (event) => {
     event.preventDefault()
     if (modalState.type === 'title') {
-      setTitleData({
-        name: modalForm.name.trim() || titleData.name,
-        subtitle: modalForm.subtitle.trim() || titleData.subtitle,
+      const isLibrary = modalState.target === 'library'
+      const activeTitleData = isLibrary ? libraryTitleData : titleData
+      const updatedTitleData = {
+        name: modalForm.name.trim() || activeTitleData.name,
+        subtitle: modalForm.subtitle.trim() || activeTitleData.subtitle,
         contacts: modalForm.contacts
           .map((entry) => ({
             label: entry.label.trim(),
             link: entry.link.trim(),
           }))
           .filter((entry) => entry.label || entry.link),
-      })
+      }
+      if (isLibrary) {
+        setLibraryTitleData(updatedTitleData)
+      } else {
+        setTitleData(updatedTitleData)
+      }
       closeModal()
       return
     }
@@ -2205,10 +2010,10 @@ function Builder({ onNavigate }) {
       .filter((s) => s.items.length > 0)
 
     return {
-      name: titleData.name || defaultResume.name,
-      subtitle: titleData.subtitle || defaultResume.subtitle,
-      contacts: titleData.contacts?.length 
-        ? titleData.contacts.map((entry) => ({ ...entry })) 
+      name: libraryTitleData.name || defaultResume.name,
+      subtitle: libraryTitleData.subtitle || defaultResume.subtitle,
+      contacts: libraryTitleData.contacts?.length 
+        ? libraryTitleData.contacts.map((entry) => ({ ...entry })) 
         : defaultResume.contacts.map((entry) => ({ ...entry })),
       sections,
     }
@@ -2220,7 +2025,7 @@ function Builder({ onNavigate }) {
 
   const masterResume = useMemo(() => {
     return buildMasterResume()
-  }, [libraryItems, librarySections, titleData])
+  }, [libraryItems, librarySections, libraryTitleData])
 
   const handleDragEnd = (event) => {
     const { active, over } = event
@@ -2749,6 +2554,7 @@ function Builder({ onNavigate }) {
               onRemoveSection={removeLibrarySection}
               onEditItem={(sectionTitle, itemId) => openEditItem(sectionTitle, itemId, 'library')}
               onRemoveItem={removeLibraryItem}
+              onEditTitle={openEditTitle}
             />
             <LivePdfPanel resume={compiledResume} masterResume={masterResume} />
             <ResumePanel

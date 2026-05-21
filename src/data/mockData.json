@@ -1,0 +1,266 @@
+{
+  "DEFAULT_RESUME_SECTIONS": [
+    {
+      "id": "res-sec-profile",
+      "title": "Profile Summary",
+      "kind": "paragraph",
+      "indented": true,
+      "items": [
+        {
+          "id": "res-profile-1",
+          "type": "paragraph",
+          "label": "Executive Summary",
+          "name": "Executive Summary",
+          "paragraph": "A *highly motivated* and *innovative* Senior UX Architect and Frontend Engineer with 6+ years of experience crafting *modular design systems* and *premium web experiences*. Specializes in balancing technical feasibility with aesthetic elegance to build solutions that users *love*.\n\nDemonstrated history of leading cross-functional teams to deliver high-impact software products with *vibrant design aesthetics* and clean UI architectures.",
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "res-sec-education",
+      "title": "Education",
+      "kind": "education",
+      "items": [
+        {
+          "id": "res-edu-1",
+          "type": "education",
+          "label": "Harvard University - School of Design",
+          "degree": "School of Design",
+          "school": "Harvard University",
+          "location": "Cambridge, MA",
+          "field": "B.Sc. in Visual Communication",
+          "dates": "2016 - 2020",
+          "bullets": [
+            "Graduated _summa cum laude_ with honors thesis on *accessible product architectures*.",
+            "Mentored under Prof. Marcus Vance in *Advanced User Interface Systems*."
+          ],
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "res-sec-experience",
+      "title": "Professional Experience",
+      "kind": "custom",
+      "items": [
+        {
+          "id": "res-exp-1",
+          "type": "custom",
+          "label": "Lead Product Designer (Forge Studio)",
+          "name": "Lead Product Designer",
+          "subtitle": "Forge Studio",
+          "location": "Remote",
+          "dates": "2022 - Present",
+          "details": [
+            "Led a cross-functional team of *8 engineers* and *3 designers* to ship a modern SaaS editor.",
+            "Shipped *12 premium resume templates* in *React/Vanilla CSS*, boosting signups by *45%*.",
+            "Crafted *interactive micro-interactions* that improved active user retention by *18%*."
+          ],
+          "enabled": true
+        },
+        {
+          "id": "res-exp-2",
+          "type": "custom",
+          "label": "Senior UI/UX Designer (Design Guild)",
+          "name": "Senior UI/UX Designer",
+          "subtitle": "Design Guild",
+          "location": "Boston, MA",
+          "dates": "2020 - 2022",
+          "details": [
+            "Designed complex B2B dashboards with *dense data visualization* and customizable widgets.",
+            "Established the company’s first unified *Design Token System*, reducing frontend handoff time by *30%*.",
+            "Conducted *30+ deep-dive user interviews* to restructure core navigation workflows."
+          ],
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "res-sec-projects",
+      "title": "Key Projects",
+      "kind": "custom",
+      "items": [
+        {
+          "id": "res-proj-1",
+          "type": "custom",
+          "label": "ResumeForge App",
+          "name": "ResumeForge App",
+          "subtitle": "Open-Source Creator",
+          "location": "Remote",
+          "dates": "2023 - Present",
+          "details": [
+            "Created a client-side *modular builder* utilizing *Dnd-kit* for smooth drag-and-drop actions.",
+            "Implemented instant *PDF rendering* in *jsPDF* with real-time preview updating.",
+            "Engineered *smart overflow detection* and dynamic section layout balancing."
+          ],
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "res-sec-skills",
+      "title": "Core Skills",
+      "kind": "list",
+      "items": [
+        {
+          "id": "res-skill-1",
+          "type": "list",
+          "label": "Technical & Design Proficiencies",
+          "name": "Technical & Design Proficiencies",
+          "subtitle": "",
+          "location": "",
+          "dates": "",
+          "details": [
+            "*Core Design:* Figma, design tokens, *micro-animations*, glassmorphic UI, responsive layouts",
+            "*Web Development:* HTML5, CSS3 Flexbox/Grid, Javascript (ES6+), React, *TailwindCSS*",
+            "*Product Strategy:* Rapid prototyping, A/B testing, user journey mapping, usability testing"
+          ],
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "res-sec-languages",
+      "title": "Languages",
+      "kind": "language",
+      "items": [
+        {
+          "id": "res-lang-1",
+          "type": "language",
+          "label": "Languages",
+          "languages": ["English (Native)", "Spanish (Fluent)", "Arabic (Bilingual)", "French (Conversational)"],
+          "enabled": true
+        }
+      ]
+    }
+  ],
+  "DEFAULT_LIBRARY_SECTIONS": ["Profile", "Education", "Experience", "Projects", "Skills", "Languages"],
+  "DEFAULT_LIBRARY_SECTION_KINDS": {
+    "Profile": "paragraph",
+    "Education": "education",
+    "Experience": "custom",
+    "Projects": "custom",
+    "Skills": "list",
+    "Languages": "language"
+  },
+  "DEFAULT_LIBRARY_ITEMS": {
+    "Profile": [
+      {
+        "id": "lib-profile-1",
+        "type": "paragraph",
+        "label": "Executive Summary",
+        "name": "Executive Summary",
+        "paragraph": "A *highly motivated* and *innovative* Senior UX Architect and Frontend Engineer with 6+ years of experience crafting *modular design systems* and *premium web experiences*. Specializes in balancing technical feasibility with aesthetic elegance to build solutions that users *love*.\n\nDemonstrated history of leading cross-functional teams to deliver high-impact software products with *vibrant design aesthetics* and clean UI architectures."
+      }
+    ],
+    "Education": [
+      {
+        "id": "lib-edu-1",
+        "type": "education",
+        "label": "Harvard University - School of Design",
+        "degree": "School of Design",
+        "school": "Harvard University",
+        "location": "Cambridge, MA",
+        "field": "B.Sc. in Visual Communication",
+        "dates": "2016 - 2020",
+        "bullets": [
+          "Graduated _summa cum laude_ with honors thesis on *accessible product architectures*.",
+          "Mentored under Prof. Marcus Vance in *Advanced User Interface Systems*."
+        ]
+      }
+    ],
+    "Experience": [
+      {
+        "id": "lib-exp-1",
+        "type": "custom",
+        "label": "Lead Product Designer (Forge Studio)",
+        "name": "Lead Product Designer",
+        "subtitle": "Forge Studio",
+        "location": "Remote",
+        "dates": "2022 - Present",
+        "details": [
+          "Led a cross-functional team of *8 engineers* and *3 designers* to ship a modern SaaS editor.",
+          "Shipped *12 premium resume templates* in *React/Vanilla CSS*, boosting signups by *45%*.",
+          "Crafted *interactive micro-interactions* that improved active user retention by *18%*."
+        ]
+      },
+      {
+        "id": "lib-exp-2",
+        "type": "custom",
+        "label": "Senior UI/UX Designer (Design Guild)",
+        "name": "Senior UI/UX Designer",
+        "subtitle": "Design Guild",
+        "location": "Boston, MA",
+        "dates": "2020 - 2022",
+        "details": [
+          "Designed complex B2B dashboards with *dense data visualization* and customizable widgets.",
+          "Established the company’s first unified *Design Token System*, reducing frontend handoff time by *30%*.",
+          "Conducted *30+ deep-dive user interviews* to restructure core navigation workflows."
+        ]
+      }
+    ],
+    "Projects": [
+      {
+        "id": "lib-proj-1",
+        "type": "custom",
+        "label": "ResumeForge App",
+        "name": "ResumeForge App",
+        "subtitle": "Open-Source Creator",
+        "location": "Remote",
+        "dates": "2023 - Present",
+        "details": [
+          "Created a client-side *modular builder* utilizing *Dnd-kit* for smooth drag-and-drop actions.",
+          "Implemented instant *PDF rendering* in *jsPDF* with real-time preview updating.",
+          "Engineered *smart overflow detection* and dynamic section layout balancing."
+        ]
+      },
+      {
+        "id": "lib-proj-2",
+        "type": "custom",
+        "label": "Mobile Onboarding Flow",
+        "name": "Mobile Onboarding Flow",
+        "subtitle": "Forge Studio Project",
+        "location": "Remote",
+        "dates": "2023",
+        "details": [
+          "Designed and tested a *4-step wizard onboarding flow* with smooth slide transitions.",
+          "A/B tested custom vs standard text inputs, resulting in a *12.5% increase* in conversion."
+        ]
+      }
+    ],
+    "Skills": [
+      {
+        "id": "lib-skill-1",
+        "type": "list",
+        "label": "Technical & Design Proficiencies",
+        "name": "Technical & Design Proficiencies",
+        "subtitle": "",
+        "location": "",
+        "dates": "",
+        "details": [
+          "*Core Design:* Figma, design tokens, *micro-animations*, glassmorphic UI, responsive layouts",
+          "*Web Development:* HTML5, CSS3 Flexbox/Grid, Javascript (ES6+), React, *TailwindCSS*",
+          "*Product Strategy:* Rapid prototyping, A/B testing, user journey mapping, usability testing"
+        ]
+      }
+    ],
+    "Languages": [
+      {
+        "id": "lib-lang-1",
+        "type": "language",
+        "label": "Languages",
+        "languages": ["English (Native)", "Spanish (Fluent)", "Arabic (Bilingual)", "French (Conversational)"]
+      }
+    ]
+  },
+  "DEFAULT_TITLE_DATA": {
+    "name": "Maro Forge",
+    "subtitle": "Lead User Experience Architect & Frontend Engineer",
+    "contacts": [
+      {"label": "maro@resumeforge.dev", "link": "mailto:maro@resumeforge.dev"},
+      {"label": "linkedin.com/in/maroforge", "link": "https://linkedin.com/in/maroforge"},
+      {"label": "+1 (555) 762-0943", "link": ""},
+      {"label": "San Francisco, CA", "link": ""}
+    ]
+  }
+}
