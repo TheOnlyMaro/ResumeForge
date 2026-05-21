@@ -14,6 +14,13 @@ import LibraryPanel from './components/builder/LibraryPanel'
 import LivePdfPanel from './components/builder/LivePdfPanel'
 import ResumePanel from './components/builder/ResumePanel'
 
+let idCounter = 0
+const generateId = (prefix) => {
+  idCounter++
+  const randomPart = Math.random().toString(36).substring(2, 9)
+  return `${prefix}-${Date.now()}-${idCounter}-${randomPart}`
+}
+
 function Builder({ onNavigate }) {
   const [resumeSections, setResumeSections] = useState([
     {
@@ -218,59 +225,66 @@ function Builder({ onNavigate }) {
   }
 
   const buildResumeItemFromLibrary = (item, sectionKind) => {
+    const common = {
+      id: generateId('item'),
+      enabled: true,
+    }
+
     if (sectionKind === 'education') {
       return {
-        id: `item-${Date.now()}`,
+        ...common,
         type: 'education',
-        label: `${item.degree ?? ''} - ${item.school ?? ''}`.trim(),
+        label: `${item.degree ?? ''} - ${item.school ?? ''}`.trim() || 'New Education',
         degree: item.degree ?? '',
         school: item.school ?? '',
         location: item.location ?? '',
-        field: item.field ?? '',
+        field: item.field ?? item.subtitle ?? '',
         dates: item.dates ?? '',
-        bullets: item.bullets ?? [],
-        enabled: true,
+        bullets: item.bullets ? [...item.bullets] : [],
       }
     }
+
     if (sectionKind === 'language') {
       return {
-        id: `item-${Date.now()}`,
+        ...common,
         type: 'language',
         label: 'Languages',
-        languages: item.languages ?? [],
-        enabled: true,
+        languages: item.languages ? [...item.languages] : [],
       }
     }
+
+    // Custom kind
     const labelCandidate =
       item.label ||
       item.name ||
       `${item.degree ?? ''}${item.school ? ` - ${item.school}` : ''}`.trim() ||
-      'New item'
+      'New Item'
+
     const detailCandidates =
       item.details ??
       item.bullets ??
-      (item.languages ? item.languages.map((lang) => lang) : [])
+      (item.languages ? [...item.languages] : [])
+
     return {
-      id: `item-${Date.now()}`,
+      ...common,
       type: 'custom',
       label: labelCandidate,
       name: item.name ?? item.label ?? labelCandidate,
       subtitle: item.subtitle ?? item.field ?? '',
       location: item.location ?? '',
       dates: item.dates ?? '',
-      details: detailCandidates,
-      enabled: true,
+      details: Array.isArray(detailCandidates) ? [...detailCandidates] : (typeof detailCandidates === 'string' ? [detailCandidates] : []),
     }
   }
 
   const buildResumeSectionFromLibrary = (title, items) => {
-    const id = `section-${Date.now()}`
+    const id = generateId('section')
     const kind = inferKindFromTitle(title)
     return {
       id,
       title,
       kind,
-      items: items.map((item) => buildResumeItemFromLibrary(item, kind)),
+      items: Array.isArray(items) ? items.map((item) => buildResumeItemFromLibrary(item, kind)) : [],
     }
   }
 
@@ -526,7 +540,7 @@ function Builder({ onNavigate }) {
         }
       } else {
         if (modalState.mode === 'add' && modalForm.title.trim()) {
-          const newId = `section-${Date.now()}`
+          const newId = generateId('section')
           const newKind = inferKindFromTitle(modalForm.title.trim())
           setResumeSections((sections) => [
             ...sections,
@@ -561,7 +575,7 @@ function Builder({ onNavigate }) {
             return
           }
           const newItemBase = {
-            id: `lib-item-${Date.now()}`,
+            id: generateId('lib-item'),
             type: modalState.itemType,
             enabled: true,
           }
@@ -612,7 +626,7 @@ function Builder({ onNavigate }) {
         }
 
         if (modalState.mode === 'add') {
-          const newId = `item-${Date.now()}`
+          const newId = generateId('item')
           setResumeSections((sections) =>
             sections.map((section) =>
               section.id === targetSectionId
@@ -708,108 +722,106 @@ function Builder({ onNavigate }) {
 
   // ── Created Resume: only enabled items from the active draft ─────────────
   const buildResumeFromState = () => {
-    // 1. Education
-    const educationSection = resumeSections.find((s) => s.kind === 'education')
-    const educationItems = (educationSection?.items ?? [])
-      .filter((item) => item.enabled)
-      .map((item) => ({
-        degree: item.degree || '',
-        school: item.school || '',
-        location: item.location || '',
-        subtitle: item.field || '',
-        dates: item.dates || '',
-        bullets: item.bullets || [],
-      }))
-
-    // 2. Custom sections (Experience, Projects, etc.)
     const sections = resumeSections
-      .filter((s) => !['education', 'language'].includes(s.kind ?? 'custom'))
-      .map((section) => ({
-        title: section.title.toUpperCase(),
-        items: section.items
-          .filter((item) => item.enabled)
-          .map((item) => ({
+      .map((section) => {
+        const enabledItems = section.items.filter((item) => item.enabled)
+        if (section.kind === 'education') {
+          return {
+            title: section.title.toUpperCase(),
+            kind: 'education',
+            items: enabledItems.map((item) => ({
+              degree: item.degree || '',
+              school: item.school || '',
+              location: item.location || '',
+              subtitle: item.field || '',
+              dates: item.dates || '',
+              bullets: item.bullets ? [...item.bullets] : [],
+            })),
+          }
+        }
+        if (section.kind === 'language') {
+          return {
+            title: section.title.toUpperCase(),
+            kind: 'language',
+            items: enabledItems.flatMap((item) => item.languages || []),
+          }
+        }
+        return {
+          title: section.title.toUpperCase(),
+          kind: 'custom',
+          items: enabledItems.map((item) => ({
             title: item.name || item.label || '',
             location: item.location || '',
             subtitle: item.subtitle || '',
             dates: item.dates || '',
-            details: item.details || [],
+            details: item.details ? [...item.details] : [],
           })),
-      }))
-      .filter((s) => s.items.length)
-
-    // 3. Languages
-    const languageSection = resumeSections.find((s) => s.kind === 'language')
-    const activeLangItems = languageSection?.items ?? []
-    const languageItem = activeLangItems.find((item) => item.enabled)
-    const languages = languageItem?.languages?.length
-      ? languageItem.languages
-      : defaultResume.languages
+        }
+      })
+      .filter((s) => s.items.length > 0)
 
     return {
-      ...defaultResume,
       name: titleData.name || defaultResume.name,
       subtitle: titleData.subtitle || defaultResume.subtitle,
-      contacts: titleData.contacts?.length ? titleData.contacts : defaultResume.contacts,
-      education: educationItems,
+      contacts: titleData.contacts?.length 
+        ? titleData.contacts.map((entry) => ({ ...entry })) 
+        : defaultResume.contacts.map((entry) => ({ ...entry })),
       sections,
-      languages,
     }
   }
 
   // ── Master CV: purely from the library, no merging with active draft ──────
   const buildMasterResume = () => {
-    // 1. Education — library items only
-    const libEduKey = Object.keys(libraryItems).find(
-      (k) => k.toLowerCase() === 'education',
-    )
-    const libEduItems = libEduKey ? libraryItems[libEduKey] : []
-    const educationItems = libEduItems.map((item) => ({
-      degree: item.degree || '',
-      school: item.school || '',
-      location: item.location || '',
-      subtitle: item.field || item.subtitle || '',
-      dates: item.dates || '',
-      bullets: item.bullets || [],
-    }))
-
-    // 2. Custom sections — library sections only, library items only
     const sections = librarySections
       .map((sectionName) => {
         const libKey = Object.keys(libraryItems).find(
           (k) => k.toLowerCase() === sectionName.toLowerCase(),
         )
         const libList = libKey ? libraryItems[libKey] : []
+        const kind = inferKindFromTitle(sectionName)
+
+        if (kind === 'education') {
+          return {
+            title: sectionName.toUpperCase(),
+            kind: 'education',
+            items: libList.map((item) => ({
+              degree: item.degree || '',
+              school: item.school || '',
+              location: item.location || '',
+              subtitle: item.field || item.subtitle || '',
+              dates: item.dates || '',
+              bullets: item.bullets ? [...item.bullets] : [],
+            })),
+          }
+        }
+        if (kind === 'language') {
+          return {
+            title: sectionName.toUpperCase(),
+            kind: 'language',
+            items: libList.flatMap((item) => item.languages || []),
+          }
+        }
         return {
           title: sectionName.toUpperCase(),
+          kind: 'custom',
           items: libList.map((item) => ({
-            title: item.title || item.label || '',
+            title: item.title || item.name || item.label || '',
             location: item.location || '',
             subtitle: item.subtitle || '',
             dates: item.dates || '',
-            details: item.details || item.bullets || [],
+            details: item.details ? [...item.details] : [],
           })),
         }
       })
-      .filter((s) => s.items.length)
-
-    // 3. Languages — library items only
-    const libLangKey = Object.keys(libraryItems).find(
-      (k) => k.toLowerCase() === 'languages' || k.toLowerCase() === 'language',
-    )
-    const libLangItems = libLangKey ? libraryItems[libLangKey] : []
-    const languages = libLangItems.length
-      ? libLangItems.flatMap((item) => item.languages || [])
-      : defaultResume.languages
+      .filter((s) => s.items.length > 0)
 
     return {
-      ...defaultResume,
       name: titleData.name || defaultResume.name,
       subtitle: titleData.subtitle || defaultResume.subtitle,
-      contacts: titleData.contacts?.length ? titleData.contacts : defaultResume.contacts,
-      education: educationItems,
+      contacts: titleData.contacts?.length 
+        ? titleData.contacts.map((entry) => ({ ...entry })) 
+        : defaultResume.contacts.map((entry) => ({ ...entry })),
       sections,
-      languages,
     }
   }
 

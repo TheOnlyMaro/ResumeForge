@@ -288,6 +288,54 @@ export async function generateResumePdfDoc(resume = defaultResume) {
 
   // ── Content ───────────────────────────────────────────────────────────────
 
+  if (resume.sections?.length) {
+    resume.sections.forEach((section) => {
+      if (typeof section === 'object' && section.kind) {
+        if (section.kind === 'education') {
+          drawSectionTitle(section.title || 'EDUCATION')
+          section.items.forEach((item) => {
+            drawLinePair(`${item.degree} - ${item.school}`, item.location, 'bold')
+            drawSubLinePair(item.subtitle, item.dates)
+            if (item.bullets?.length) {
+              drawBullets(item.bullets)
+            }
+            y += 6
+          })
+        } else if (section.kind === 'language') {
+          drawSectionTitle(section.title || 'LANGUAGES')
+          checkPageBreak(12)
+          doc.setFont('Calibri', 'normal')
+          doc.setFontSize(10)
+          doc.text(section.items.join(' | '), leftX, y)
+          y += 12
+        } else {
+          // Custom section
+          drawSectionTitle(section.title)
+          section.items.forEach((item) => {
+            drawLinePair(item.title, item.location, 'bold')
+            drawSubLinePair(item.subtitle, item.dates)
+            if (item.details?.length) {
+              drawBullets(item.details)
+            }
+            y += 6
+          })
+        }
+      } else {
+        // Legacy custom section structure
+        drawSectionTitle(section.title)
+        section.items.forEach((item) => {
+          drawLinePair(item.title, item.location, 'bold')
+          drawSubLinePair(item.subtitle, item.dates)
+          if (item.details?.length) {
+            drawBullets(item.details)
+          }
+          y += 6
+        })
+      }
+    })
+  }
+
+  // ── Legacy / Fallback flat rendering ──────────────────────────────────────
   if (resume.education?.length) {
     drawSectionTitle('EDUCATION')
     resume.education.forEach((item) => {
@@ -299,18 +347,6 @@ export async function generateResumePdfDoc(resume = defaultResume) {
       y += 6
     })
   }
-
-  resume.sections.forEach((section) => {
-    drawSectionTitle(section.title)
-    section.items.forEach((item) => {
-      drawLinePair(item.title, item.location, 'bold')
-      drawSubLinePair(item.subtitle, item.dates)
-      if (item.details?.length) {
-        drawBullets(item.details)
-      }
-      y += 6
-    })
-  })
 
   if (resume.languages?.length) {
     drawSectionTitle('LANGUAGES')
