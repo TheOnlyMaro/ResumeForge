@@ -13,6 +13,7 @@ import DismissNotice from './components/builder/DismissNotice'
 import LibraryPanel from './components/builder/LibraryPanel'
 import LivePdfPanel from './components/builder/LivePdfPanel'
 import ResumePanel from './components/builder/ResumePanel'
+import WorkspaceBar from './components/builder/WorkspaceBar'
 
 let idCounter = 0
 const generateId = (prefix) => {
@@ -166,6 +167,141 @@ function Builder({ onNavigate }) {
     visible: false,
     message: '',
   })
+
+  // ── Workspace Mock States (Phase 1 GUI First) ───────────────────
+  const [resumes, setResumes] = useState([
+    { id: 'resume-1', name: 'Harvard Template Resume' },
+    { id: 'resume-2', name: 'Software Engineer Resume' },
+  ])
+  const [activeResumeId, setActiveResumeId] = useState('resume-1')
+
+  const [masterCvs, setMasterCvs] = useState([
+    { id: 'cv-1', name: "Maro's Master CV" },
+  ])
+  const [activeMasterCvId, setActiveMasterCvId] = useState('cv-1')
+
+  const [autosaveEnabled, setAutosaveEnabled] = useState(false)
+
+  const switchActiveResume = (newId) => {
+    setActiveResumeId(newId)
+    showDismissNotice(`Switched active resume to "${resumes.find(r => r.id === newId)?.name}"!`)
+  }
+
+  const switchActiveMasterCv = (newId) => {
+    setActiveMasterCvId(newId)
+    showDismissNotice(`Switched active Master CV to "${masterCvs.find(c => c.id === newId)?.name}"!`)
+  }
+
+  const renameResume = (id, currentName) => {
+    const newName = prompt('Enter a new filename for this Resume:', currentName)
+    if (newName && newName.trim()) {
+      setResumes(prev => prev.map(r => r.id === id ? { ...r, name: newName.trim() } : r))
+      showDismissNotice(`Renamed Resume file to "${newName.trim()}"!`)
+    }
+  }
+
+  const renameMasterCv = (id, currentName) => {
+    const newName = prompt('Enter a new filename for this Master CV:', currentName)
+    if (newName && newName.trim()) {
+      setMasterCvs(prev => prev.map(c => c.id === id ? { ...c, name: newName.trim() } : c))
+      showDismissNotice(`Renamed Master CV file to "${newName.trim()}"!`)
+    }
+  }
+
+  const deleteResume = (id) => {
+    const target = resumes.find(r => r.id === id)
+    if (resumes.length <= 1) {
+      alert('You must maintain at least one Resume file.')
+      return
+    }
+    if (confirm(`Are you sure you want to delete "${target?.name}"?`)) {
+      setResumes(prev => {
+        const updated = prev.filter(r => r.id !== id)
+        if (id === activeResumeId) {
+          setActiveResumeId(updated[0].id)
+        }
+        return updated
+      })
+      showDismissNotice(`Deleted resume file "${target?.name}".`)
+    }
+  }
+
+  const deleteMasterCv = (id) => {
+    const target = masterCvs.find(c => c.id === id)
+    if (masterCvs.length <= 1) {
+      alert('You must maintain at least one Master CV file.')
+      return
+    }
+    if (confirm(`Are you sure you want to delete "${target?.name}"?`)) {
+      setMasterCvs(prev => {
+        const updated = prev.filter(c => c.id !== id)
+        if (id === activeMasterCvId) {
+          setActiveMasterCvId(updated[0].id)
+        }
+        return updated
+      })
+      showDismissNotice(`Deleted Master CV file "${target?.name}".`)
+    }
+  }
+
+  const duplicateResume = (id) => {
+    const target = resumes.find(r => r.id === id)
+    if (!target) return
+    const newResume = {
+      id: generateId('resume'),
+      name: `${target.name} (Copy)`
+    }
+    setResumes(prev => [...prev, newResume])
+    setActiveResumeId(newResume.id)
+    showDismissNotice(`Duplicated and switched to "${newResume.name}"!`)
+  }
+
+  const createEmptyResume = () => {
+    const newResume = {
+      id: generateId('resume'),
+      name: `Untitled Resume (${resumes.length + 1})`
+    }
+    setResumes(prev => [...prev, newResume])
+    setActiveResumeId(newResume.id)
+    showDismissNotice(`Created empty resume "${newResume.name}"!`)
+  }
+
+  const createResumeFromMasterCv = () => {
+    const newResume = {
+      id: generateId('resume'),
+      name: `Resume from Master CV (${resumes.length + 1})`
+    }
+    setResumes(prev => [...prev, newResume])
+    setActiveResumeId(newResume.id)
+    showDismissNotice(`Created new resume from Master CV: "${newResume.name}"!`)
+  }
+
+  const createNewMasterCv = () => {
+    const newCv = {
+      id: generateId('cv'),
+      name: `Untitled Master CV (${masterCvs.length + 1})`
+    }
+    setMasterCvs(prev => [...prev, newCv])
+    setActiveMasterCvId(newCv.id)
+    showDismissNotice(`Created and switched to Master CV "${newCv.name}"!`)
+  }
+
+  const handleToggleAutosave = () => {
+    setAutosaveEnabled(prev => !prev)
+    showDismissNotice(`Autosave turned ${!autosaveEnabled ? 'ON' : 'OFF'}!`)
+  }
+
+  const handleManualSave = () => {
+    showDismissNotice('Saved work (Mock)!')
+  }
+
+  const triggerJsonImport = () => {
+    alert('JSON Import dialog will open (Mock, ready for Phase 5 integration).')
+  }
+
+  const triggerJsonExport = () => {
+    alert('JSON Export initiated (Mock, ready for Phase 5 integration).')
+  }
   const [modalForm, setModalForm] = useState({
     title: '',
     itemName: '',
@@ -1239,6 +1375,28 @@ function Builder({ onNavigate }) {
             </button>
           </div>
         </div>
+
+        <WorkspaceBar
+          resumes={resumes}
+          activeResumeId={activeResumeId}
+          onSelectResume={switchActiveResume}
+          onRenameResume={renameResume}
+          onDeleteResume={deleteResume}
+          onDuplicateResume={duplicateResume}
+          onNewEmptyResume={createEmptyResume}
+          onNewFromMasterCv={createResumeFromMasterCv}
+          masterCvs={masterCvs}
+          activeMasterCvId={activeMasterCvId}
+          onSelectMasterCv={switchActiveMasterCv}
+          onRenameMasterCv={renameMasterCv}
+          onDeleteMasterCv={deleteMasterCv}
+          onNewMasterCv={createNewMasterCv}
+          autosaveEnabled={autosaveEnabled}
+          onToggleAutosave={handleToggleAutosave}
+          onManualSave={handleManualSave}
+          onImportJson={triggerJsonImport}
+          onExportJson={triggerJsonExport}
+        />
 
         <DndContext
           collisionDetection={(args) => {
