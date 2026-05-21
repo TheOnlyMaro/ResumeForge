@@ -1172,6 +1172,7 @@ function Builder({ onNavigate }) {
     bullets: '',
     details: '',
     languages: '',
+    sectionType: 'custom',
   })
 
   // Only call this when CREATING a new section from a user-typed title.
@@ -1377,6 +1378,7 @@ function Builder({ onNavigate }) {
       bullets: '',
       details: '',
       languages: '',
+      sectionType: 'custom',
     })
     setModalState({
       open: true,

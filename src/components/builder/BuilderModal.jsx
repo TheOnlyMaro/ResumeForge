@@ -150,20 +150,43 @@ function BuilderModal({
               </button>
             </div>
           ) : modalState.type === 'section' ? (
-            <label className="text-sm text-slate-300">
-              Section title
-              <input
-                type="text"
-                value={modalForm.title}
-                onChange={(event) =>
-                  setModalForm((prev) => ({
-                    ...prev,
-                    title: event.target.value,
-                  }))
-                }
-                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
-              />
-            </label>
+            <div className="flex flex-col gap-4">
+              <label className="text-sm text-slate-300">
+                Section title
+                <input
+                  type="text"
+                  value={modalForm.title}
+                  onChange={(event) =>
+                    setModalForm((prev) => ({
+                      ...prev,
+                      title: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+                />
+              </label>
+              {modalState.mode === 'add' && (
+                <label className="text-sm text-slate-300">
+                  Section type
+                  <select
+                    value={modalForm.sectionType || 'custom'}
+                    onChange={(event) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        sectionType: event.target.value,
+                      }))
+                    }
+                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100 cursor-pointer"
+                  >
+                    <option value="custom">Custom / Bulleted List (Default)</option>
+                    <option value="education">Education-like (Degree, School, Dates, etc.)</option>
+                    <option value="paragraph">Paragraph Section (Plain text narrative)</option>
+                    <option value="list">Non-bulleted List (Unindented lines)</option>
+                    <option value="language">Language / Single Row List</option>
+                  </select>
+                </label>
+              )}
+            </div>
           ) : (
             <>
               {modalState.itemType === 'education' && (
