@@ -393,6 +393,21 @@ export async function generateResumePdfDoc(resume = defaultResume) {
     const loc = (location || '').trim()
     const d = (dates || '').trim()
 
+    const shouldSkipTitle = t.startsWith('+') || t === '+'
+
+    if (shouldSkipTitle) {
+      if (s || loc || d) {
+        let rightText = ''
+        if (loc && d) {
+          rightText = `${loc}  |  ${d}`
+        } else {
+          rightText = loc || d
+        }
+        drawSubLinePair(s, rightText)
+      }
+      return
+    }
+
     if (!t && !s) {
       return
     }
