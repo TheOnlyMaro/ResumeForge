@@ -191,7 +191,11 @@ function BuilderModal({
               )}
               {(() => {
                 const sectionBeingEdited = resumeSections.find((s) => s.id === modalState.sectionId);
-                const sectionKind = modalState.mode === 'add' ? (modalForm.sectionType || 'custom') : (sectionBeingEdited?.kind || 'custom');
+                const sectionKind = modalState.mode === 'add'
+                  ? (modalForm.sectionType || 'custom')
+                  : (modalState.target === 'library'
+                      ? (librarySectionKinds[modalState.sectionId] || 'custom')
+                      : (sectionBeingEdited?.kind || 'custom'));
                 if (sectionKind === 'paragraph') {
                   return (
                     <label className="flex items-center gap-3 text-sm text-slate-300 mt-2 cursor-pointer bg-slate-950/40 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition">
