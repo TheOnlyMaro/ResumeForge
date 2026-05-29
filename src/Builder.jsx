@@ -1581,7 +1581,7 @@ function Builder({ onNavigate }) {
         }
 
         const targetSection =
-          modalState.sectionId || modalForm.sectionId || libraryActiveSection || librarySections[0]
+          modalForm.sectionId || modalState.sectionId || libraryActiveSection || librarySections[0]
         if (!targetSection) {
           closeModal()
           return

@@ -186,7 +186,7 @@ export async function generateResumePdfDoc(resume = defaultResume) {
     }
   })
 
-  y += 16
+  y += 24
 
   // ── Draw helpers ──────────────────────────────────────────────────────────
 
