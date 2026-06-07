@@ -190,6 +190,38 @@ export async function generateResumePdfDoc(resume = defaultResume) {
 
   // ── Draw helpers ──────────────────────────────────────────────────────────
 
+  const isAlphanumeric = (char) => /[a-zA-Z0-9]/.test(char)
+  
+  const isValidFormattingStart = (text, i, markerLength) => {
+    // Opening marker must be preceded by start-of-line or space
+    if (i > 0 && text[i - 1] !== ' ') {
+      return false
+    }
+    
+    // Opening marker must be followed by non-space alphanumeric character
+    const nextIdx = i + markerLength
+    if (nextIdx >= text.length || text[nextIdx] === ' ') {
+      return false
+    }
+    
+    return true
+  }
+  
+  const isValidFormattingEnd = (text, i, markerLength) => {
+    // Closing marker must be preceded by non-space alphanumeric character
+    if (i === 0 || text[i - 1] === ' ') {
+      return false
+    }
+    
+    // Closing marker must be followed by space, non-alphanumeric, or end of string
+    const nextIdx = i + markerLength
+    if (nextIdx < text.length && text[nextIdx] !== ' ' && isAlphanumeric(text[nextIdx])) {
+      return false
+    }
+    
+    return true
+  }
+
   const parseFormatting = (text) => {
     if (typeof text !== 'string') {
       text = String(text || '')
@@ -204,41 +236,68 @@ export async function generateResumePdfDoc(resume = defaultResume) {
     
     while (i < text.length) {
       if (text.startsWith('__', i)) {
-        if (i > lastIndex) {
-          segments.push({
-            text: text.substring(lastIndex, i),
-            bold: currentBold,
-            italic: currentItalic,
-            underline: currentUnderline
-          })
+        const isOpening = !currentUnderline
+        const isValid = isOpening 
+          ? isValidFormattingStart(text, i, 2)
+          : isValidFormattingEnd(text, i, 2)
+        
+        if (isValid) {
+          if (i > lastIndex) {
+            segments.push({
+              text: text.substring(lastIndex, i),
+              bold: currentBold,
+              italic: currentItalic,
+              underline: currentUnderline
+            })
+          }
+          currentUnderline = !currentUnderline
+          i += 2
+          lastIndex = i
+        } else {
+          i += 1
         }
-        currentUnderline = !currentUnderline
-        i += 2
-        lastIndex = i
       } else if (text[i] === '*') {
-        if (i > lastIndex) {
-          segments.push({
-            text: text.substring(lastIndex, i),
-            bold: currentBold,
-            italic: currentItalic,
-            underline: currentUnderline
-          })
+        const isOpening = !currentBold
+        const isValid = isOpening
+          ? isValidFormattingStart(text, i, 1)
+          : isValidFormattingEnd(text, i, 1)
+        
+        if (isValid) {
+          if (i > lastIndex) {
+            segments.push({
+              text: text.substring(lastIndex, i),
+              bold: currentBold,
+              italic: currentItalic,
+              underline: currentUnderline
+            })
+          }
+          currentBold = !currentBold
+          i += 1
+          lastIndex = i
+        } else {
+          i += 1
         }
-        currentBold = !currentBold
-        i += 1
-        lastIndex = i
       } else if (text[i] === '_') {
-        if (i > lastIndex) {
-          segments.push({
-            text: text.substring(lastIndex, i),
-            bold: currentBold,
-            italic: currentItalic,
-            underline: currentUnderline
-          })
+        const isOpening = !currentItalic
+        const isValid = isOpening
+          ? isValidFormattingStart(text, i, 1)
+          : isValidFormattingEnd(text, i, 1)
+        
+        if (isValid) {
+          if (i > lastIndex) {
+            segments.push({
+              text: text.substring(lastIndex, i),
+              bold: currentBold,
+              italic: currentItalic,
+              underline: currentUnderline
+            })
+          }
+          currentItalic = !currentItalic
+          i += 1
+          lastIndex = i
+        } else {
+          i += 1
         }
-        currentItalic = !currentItalic
-        i += 1
-        lastIndex = i
       } else {
         i += 1
       }
