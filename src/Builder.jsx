@@ -68,6 +68,7 @@ function Builder({ onNavigate }) {
   const [masterCvs, setMasterCvs] = useState([])
   const [activeMasterCvId, setActiveMasterCvId] = useState('')
   const [librarySectionKinds, setLibrarySectionKinds] = useState(DEFAULT_LIBRARY_SECTION_KINDS)
+  const [librarySectionIndents, setLibrarySectionIndents] = useState({ "Profile": true })
   const [autosaveEnabled, setAutosaveEnabled] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   // Tracks which file IDs have unsaved in-memory edits
@@ -90,6 +91,7 @@ function Builder({ onNavigate }) {
     activeLibrarySections = librarySections,
     activeLibraryItems = libraryItems,
     activeLibrarySectionKinds = librarySectionKinds,
+    activeLibrarySectionIndents = librarySectionIndents,
     activeLibraryTitleData = libraryTitleData,
     autosave = autosaveEnabled,
   } = {}) => {
@@ -112,6 +114,7 @@ function Builder({ onNavigate }) {
           librarySections: activeLibrarySections,
           libraryItems: activeLibraryItems,
           librarySectionKinds: activeLibrarySectionKinds,
+          librarySectionIndents: activeLibrarySectionIndents,
           titleData: activeLibraryTitleData,
           updatedAt: Date.now(),
         }
@@ -142,6 +145,7 @@ function Builder({ onNavigate }) {
       librarySections: DEFAULT_LIBRARY_SECTIONS,
       libraryItems: DEFAULT_LIBRARY_ITEMS,
       librarySectionKinds: DEFAULT_LIBRARY_SECTION_KINDS,
+      librarySectionIndents: { "Profile": true },
       titleData: DEFAULT_TITLE_DATA,
     }
     const defaultRes1 = {
@@ -187,6 +191,7 @@ function Builder({ onNavigate }) {
     setLibrarySections(DEFAULT_LIBRARY_SECTIONS)
     setLibraryItems(DEFAULT_LIBRARY_ITEMS)
     setLibrarySectionKinds(DEFAULT_LIBRARY_SECTION_KINDS)
+    setLibrarySectionIndents({ "Profile": true })
     setLibraryTitleData(DEFAULT_TITLE_DATA)
     setLibraryActiveSection(DEFAULT_LIBRARY_SECTIONS[0])
 
@@ -222,6 +227,7 @@ function Builder({ onNavigate }) {
             setLibrarySections(activeCv.librarySections || [])
             setLibraryItems(activeCv.libraryItems || {})
             setLibrarySectionKinds(activeCv.librarySectionKinds || DEFAULT_LIBRARY_SECTION_KINDS)
+            setLibrarySectionIndents(activeCv.librarySectionIndents || { "Profile": true })
             setLibraryTitleData(activeCv.titleData || DEFAULT_TITLE_DATA)
             if (activeCv.librarySections && activeCv.librarySections.length > 0) {
               setLibraryActiveSection(activeCv.librarySections[0])
@@ -236,6 +242,7 @@ function Builder({ onNavigate }) {
             librarySections: DEFAULT_LIBRARY_SECTIONS,
             libraryItems: DEFAULT_LIBRARY_ITEMS,
             librarySectionKinds: DEFAULT_LIBRARY_SECTION_KINDS,
+            librarySectionIndents: { "Profile": true },
             titleData: DEFAULT_TITLE_DATA,
           }
           setMasterCvs([defaultCv])
@@ -243,6 +250,7 @@ function Builder({ onNavigate }) {
           setLibrarySections(DEFAULT_LIBRARY_SECTIONS)
           setLibraryItems(DEFAULT_LIBRARY_ITEMS)
           setLibrarySectionKinds(DEFAULT_LIBRARY_SECTION_KINDS)
+          setLibrarySectionIndents({ "Profile": true })
           setLibraryTitleData(DEFAULT_TITLE_DATA)
           setLibraryActiveSection(DEFAULT_LIBRARY_SECTIONS[0])
         }
@@ -321,7 +329,7 @@ function Builder({ onNavigate }) {
     setDirtyCvIds((prev) =>
       prev.includes(activeMasterCvId) ? prev : [...prev, activeMasterCvId]
     )
-  }, [activeMasterCvId, librarySections, libraryItems, librarySectionKinds, libraryTitleData]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeMasterCvId, librarySections, libraryItems, librarySectionKinds, librarySectionIndents, libraryTitleData]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Warn user before closing / refreshing if any file has unsaved changes
   useEffect(() => {
@@ -350,6 +358,7 @@ function Builder({ onNavigate }) {
         activeLibrarySections: librarySections,
         activeLibraryItems: libraryItems,
         activeLibrarySectionKinds: librarySectionKinds,
+        activeLibrarySectionIndents: librarySectionIndents,
         activeLibraryTitleData: libraryTitleData,
         autosave: autosaveEnabled,
       })
@@ -362,6 +371,7 @@ function Builder({ onNavigate }) {
     librarySections,
     libraryItems,
     librarySectionKinds,
+    librarySectionIndents,
     libraryTitleData,
     resumes,
     masterCvs,
@@ -411,6 +421,7 @@ function Builder({ onNavigate }) {
     const outgoingLibrarySections = librarySections
     const outgoingLibraryItems = libraryItems
     const outgoingLibrarySectionKinds = librarySectionKinds
+    const outgoingLibrarySectionIndents = librarySectionIndents
     const outgoingLibraryTitleData = libraryTitleData
 
     setMasterCvs((prevCvs) => {
@@ -422,6 +433,7 @@ function Builder({ onNavigate }) {
             librarySections: outgoingLibrarySections,
             libraryItems: outgoingLibraryItems,
             librarySectionKinds: outgoingLibrarySectionKinds,
+            librarySectionIndents: outgoingLibrarySectionIndents,
             titleData: outgoingLibraryTitleData,
           }
           // Note: no updatedAt — only real saves move the timestamp
@@ -434,11 +446,13 @@ function Builder({ onNavigate }) {
       const incomingLibSections = targetCv?.librarySections ?? []
       const incomingLibItems = targetCv?.libraryItems ?? {}
       const incomingLibSectionKinds = targetCv?.librarySectionKinds ?? {}
+      const incomingLibSectionIndents = targetCv?.librarySectionIndents ?? { "Profile": true }
       const incomingLibTitleData = targetCv?.titleData ?? DEFAULT_TITLE_DATA
 
       setLibrarySections(incomingLibSections)
       setLibraryItems(incomingLibItems)
       setLibrarySectionKinds(incomingLibSectionKinds)
+      setLibrarySectionIndents(incomingLibSectionIndents)
       setLibraryTitleData(incomingLibTitleData)
       if (incomingLibSections.length > 0) {
         setLibraryActiveSection(incomingLibSections[0])
@@ -711,10 +725,12 @@ function Builder({ onNavigate }) {
     const newSections = (activeCv.librarySections || []).map((sectionTitle) => {
       const items = activeCv.libraryItems[sectionTitle] || []
       const kind = activeCv.librarySectionKinds?.[sectionTitle] || inferKindFromTitle(sectionTitle)
+      const indented = activeCv.librarySectionIndents?.[sectionTitle] || false
       return {
         id: generateId('section'),
         title: sectionTitle,
         kind: kind,
+        indented: indented,
         items: items.map((item) => buildResumeItemFromLibrary(item, kind)),
       }
     })
@@ -759,6 +775,7 @@ function Builder({ onNavigate }) {
       librarySections: DEFAULT_LIBRARY_SECTIONS,
       libraryItems: JSON.parse(JSON.stringify(DEFAULT_LIBRARY_ITEMS)),
       librarySectionKinds: DEFAULT_LIBRARY_SECTION_KINDS,
+      librarySectionIndents: { "Profile": true },
       titleData: DEFAULT_TITLE_DATA,
     }
     setMasterCvs((prev) => {
@@ -766,6 +783,7 @@ function Builder({ onNavigate }) {
       setLibrarySections(newCv.librarySections)
       setLibraryItems(newCv.libraryItems)
       setLibrarySectionKinds(newCv.librarySectionKinds)
+      setLibrarySectionIndents(newCv.librarySectionIndents)
       setLibraryTitleData(newCv.titleData)
       setLibraryActiveSection(newCv.librarySections[0])
       setActiveMasterCvId(newCv.id)
@@ -779,6 +797,7 @@ function Builder({ onNavigate }) {
         activeLibrarySections: newCv.librarySections,
         activeLibraryItems: newCv.libraryItems,
         activeLibrarySectionKinds: newCv.librarySectionKinds,
+        activeLibrarySectionIndents: newCv.librarySectionIndents,
         activeLibraryTitleData: newCv.titleData,
         autosave: autosaveEnabled,
       })
@@ -897,10 +916,14 @@ function Builder({ onNavigate }) {
               ],
               onChoice: (choice) => {
                 const incomingSectionKinds = parsed.librarySectionKinds || {}
+                const incomingSectionIndents = parsed.librarySectionIndents || {}
                 parsed.librarySections.forEach((s) => {
                   if (!incomingSectionKinds[s]) {
                     const firstItem = parsed.libraryItems[s]?.[0]
                     incomingSectionKinds[s] = firstItem?.type ?? inferKindFromTitle(s)
+                  }
+                  if (incomingSectionIndents[s] === undefined) {
+                    incomingSectionIndents[s] = false
                   }
                 })
                 const incomingTitleData = parsed.titleData || parsed.libraryTitleData || DEFAULT_TITLE_DATA
@@ -914,6 +937,7 @@ function Builder({ onNavigate }) {
                     librarySections: parsed.librarySections,
                     libraryItems: parsed.libraryItems,
                     librarySectionKinds: incomingSectionKinds,
+                    librarySectionIndents: incomingSectionIndents,
                     titleData: incomingTitleData,
                   }
                   setMasterCvs((prev) => {
@@ -921,10 +945,11 @@ function Builder({ onNavigate }) {
                     setLibrarySections(newCv.librarySections)
                     setLibraryItems(newCv.libraryItems)
                     setLibrarySectionKinds(newCv.librarySectionKinds)
+                    setLibrarySectionIndents(newCv.librarySectionIndents)
                     setLibraryTitleData(newCv.titleData)
                     if (newCv.librarySections?.length > 0) setLibraryActiveSection(newCv.librarySections[0])
                     setActiveMasterCvId(newCv.id)
-                    saveWorkspace({ resumesList: resumes, activeId: activeResumeId, activeSections: resumeSections, activeTitleData: titleData, masterCvsList: updated, activeCvId: newCv.id, activeLibrarySections: newCv.librarySections, activeLibraryItems: newCv.libraryItems, activeLibrarySectionKinds: newCv.librarySectionKinds, activeLibraryTitleData: newCv.titleData, autosave: autosaveEnabled })
+                    saveWorkspace({ resumesList: resumes, activeId: activeResumeId, activeSections: resumeSections, activeTitleData: titleData, masterCvsList: updated, activeCvId: newCv.id, activeLibrarySections: newCv.librarySections, activeLibraryItems: newCv.libraryItems, activeLibrarySectionKinds: newCv.librarySectionKinds, activeLibrarySectionIndents: newCv.librarySectionIndents, activeLibraryTitleData: newCv.titleData, autosave: autosaveEnabled })
                     return updated
                   })
                   showDismissNotice(`Imported new Master CV “${newCv.name}”!`)
@@ -932,11 +957,12 @@ function Builder({ onNavigate }) {
                   setLibrarySections(parsed.librarySections)
                   setLibraryItems(parsed.libraryItems)
                   setLibrarySectionKinds(incomingSectionKinds)
+                  setLibrarySectionIndents(incomingSectionIndents)
                   setLibraryTitleData(incomingTitleData)
                   if (parsed.librarySections?.length > 0) setLibraryActiveSection(parsed.librarySections[0])
                   setMasterCvs((prev) => {
-                    const updated = prev.map((cv) => cv.id === activeMasterCvId ? { ...cv, name: parsed.name || cv.name, updatedAt: Date.now(), librarySections: parsed.librarySections, libraryItems: parsed.libraryItems, librarySectionKinds: incomingSectionKinds, titleData: incomingTitleData } : cv)
-                    saveWorkspace({ resumesList: resumes, activeId: activeResumeId, activeSections: resumeSections, activeTitleData: titleData, masterCvsList: updated, activeCvId: activeMasterCvId, activeLibrarySections: parsed.librarySections, activeLibraryItems: parsed.libraryItems, activeLibrarySectionKinds: incomingSectionKinds, activeLibraryTitleData: incomingTitleData, autosave: autosaveEnabled })
+                    const updated = prev.map((cv) => cv.id === activeMasterCvId ? { ...cv, name: parsed.name || cv.name, updatedAt: Date.now(), librarySections: parsed.librarySections, libraryItems: parsed.libraryItems, librarySectionKinds: incomingSectionKinds, librarySectionIndents: incomingSectionIndents, titleData: incomingTitleData } : cv)
+                    saveWorkspace({ resumesList: resumes, activeId: activeResumeId, activeSections: resumeSections, activeTitleData: titleData, masterCvsList: updated, activeCvId: activeMasterCvId, activeLibrarySections: parsed.librarySections, activeLibraryItems: parsed.libraryItems, activeLibrarySectionKinds: incomingSectionKinds, activeLibrarySectionIndents: incomingSectionIndents, activeLibraryTitleData: incomingTitleData, autosave: autosaveEnabled })
                     return updated
                   })
                   showDismissNotice('Successfully overwrote active Master CV!')
@@ -977,7 +1003,7 @@ function Builder({ onNavigate }) {
           filename = `${activeRes.name || 'resume'}.json`
         } else {
           if (!activeCv) { showDialog({ type: 'alert', variant: 'error', title: 'Export Error', message: 'No active Master CV found to export.' }); return }
-          dataToExport = { fileType: 'resume_forge_master_cv', version: 1, name: activeCv.name, createdAt: activeCv.createdAt, updatedAt: Date.now(), librarySections, libraryItems, librarySectionKinds, titleData: libraryTitleData }
+          dataToExport = { fileType: 'resume_forge_master_cv', version: 1, name: activeCv.name, createdAt: activeCv.createdAt, updatedAt: Date.now(), librarySections, libraryItems, librarySectionKinds, librarySectionIndents, titleData: libraryTitleData }
           filename = `${activeCv.name || 'master_cv'}.json`
         }
         const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' })
@@ -1128,11 +1154,13 @@ function Builder({ onNavigate }) {
 
   const buildResumeSectionFromLibrary = (title, items) => {
     const id = generateId('section')
-    const kind = inferKindFromTitle(title)
+    const kind = librarySectionKinds[title] || inferKindFromTitle(title)
+    const indented = librarySectionIndents[title] || false
     return {
       id,
       title,
       kind,
+      indented,
       items: Array.isArray(items) ? items.map((item) => buildResumeItemFromLibrary(item, kind)) : [],
     }
   }
@@ -1345,6 +1373,7 @@ function Builder({ onNavigate }) {
     let indented = false
     if (target === 'library') {
       title = sectionId
+      indented = librarySectionIndents[sectionId] || false
     } else {
       const section = resumeSections.find((item) => item.id === sectionId)
       title = section?.title ?? ''
@@ -1459,6 +1488,7 @@ function Builder({ onNavigate }) {
         if (modalState.mode === 'add' && modalForm.title.trim()) {
           const sectionTitle = modalForm.title.trim()
           const sectionKind = modalForm.sectionType || 'custom'
+          const sectionIndented = modalForm.indented || false
           setLibrarySections((sections) => [
             ...sections,
             sectionTitle,
@@ -1471,10 +1501,15 @@ function Builder({ onNavigate }) {
             ...kinds,
             [sectionTitle]: sectionKind,
           }))
+          setLibrarySectionIndents((indents) => ({
+            ...indents,
+            [sectionTitle]: sectionIndented,
+          }))
         }
         if (modalState.mode === 'edit' && modalForm.title.trim()) {
           const oldTitle = modalState.sectionId
           const newTitle = modalForm.title.trim()
+          const sectionIndented = modalForm.indented || false
           if (oldTitle !== newTitle) {
             setLibrarySections((sections) =>
               sections.map((s) => (s === oldTitle ? newTitle : s))
@@ -1491,9 +1526,20 @@ function Builder({ onNavigate }) {
               delete copy[oldTitle]
               return copy
             })
+            setLibrarySectionIndents((indents) => {
+              const copy = { ...indents }
+              copy[newTitle] = sectionIndented
+              delete copy[oldTitle]
+              return copy
+            })
             if (libraryActiveSection === oldTitle) {
               setLibraryActiveSection(newTitle)
             }
+          } else {
+            setLibrarySectionIndents((indents) => ({
+              ...indents,
+              [oldTitle]: sectionIndented,
+            }))
           }
         }
       } else {
@@ -1535,7 +1581,7 @@ function Builder({ onNavigate }) {
         }
 
         const targetSection =
-          modalState.sectionId || modalForm.sectionId || libraryActiveSection || librarySections[0]
+          modalForm.sectionId || modalState.sectionId || libraryActiveSection || librarySections[0]
         if (!targetSection) {
           closeModal()
           return
@@ -1989,6 +2035,7 @@ function Builder({ onNavigate }) {
           return {
             title: sectionName.toUpperCase(),
             kind: 'paragraph',
+            indented: librarySectionIndents[sectionName] || false,
             items: libList.map((item) => ({
               label: item.label || '',
               paragraph: item.paragraph || '',

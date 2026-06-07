@@ -186,7 +186,7 @@ export async function generateResumePdfDoc(resume = defaultResume) {
     }
   })
 
-  y += 16
+  y += 24
 
   // ── Draw helpers ──────────────────────────────────────────────────────────
 
@@ -362,11 +362,11 @@ export async function generateResumePdfDoc(resume = defaultResume) {
     doc.setFont('Calibri', 'bold')
     doc.setFontSize(12)
     doc.text(title, leftX, y)
-    y += 3
+    y += 2
     doc.setDrawColor(0, 0, 0)
     doc.setLineWidth(0.8)
     doc.line(leftX, y, rightX, y)
-    y += 9
+    y += 13
   }
 
   const drawLinePair = (leftText, rightText, style = 'normal') => {
@@ -392,6 +392,21 @@ export async function generateResumePdfDoc(resume = defaultResume) {
     const s = (subtitle || '').trim()
     const loc = (location || '').trim()
     const d = (dates || '').trim()
+
+    const shouldSkipTitle = t.startsWith('+') || t === '+'
+
+    if (shouldSkipTitle) {
+      if (s || loc || d) {
+        let rightText = ''
+        if (loc && d) {
+          rightText = `${loc}  |  ${d}`
+        } else {
+          rightText = loc || d
+        }
+        drawSubLinePair(s, rightText)
+      }
+      return
+    }
 
     if (!t && !s) {
       return
