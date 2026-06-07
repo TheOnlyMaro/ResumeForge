@@ -405,6 +405,12 @@ export async function generateResumePdfDoc(resume = defaultResume) {
 
   const formatBulletText = (bullet) => {
     const safeBullet = typeof bullet === 'string' ? bullet : String(bullet || '')
+    
+    // Skip auto-formatting if text already contains formatting markers
+    if (safeBullet.includes('*') || safeBullet.includes('_')) {
+      return safeBullet
+    }
+    
     const [label, rest] = safeBullet.split(/:(.+)/)
     if (rest) {
       const trimmedLabel = label.trim()
