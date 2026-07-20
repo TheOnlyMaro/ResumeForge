@@ -60,6 +60,312 @@ const registerCalibriFonts = (doc) => {
   doc.addFont('calibri-bold-italic.ttf', 'Calibri', 'bolditalic')
 }
 
+const isEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+
+const normalizeLink = (value, label = '') => {
+  const trimmed = (value || '').trim()
+  const fallbackLabel = (label || '').trim()
+
+  let targetLink = trimmed
+  if (!targetLink) {
+    if (isEmail(fallbackLabel)) {
+      return `mailto:${fallbackLabel}`
+    }
+    if (/^[^\s]+\.[^\s]+$/.test(fallbackLabel)) {
+      targetLink = fallbackLabel
+    } else {
+      return ''
+    }
+  }
+
+  if (/^[a-z][a-z0-9+.-]*:/i.test(targetLink)) {
+    if (/^(https?|mailto):/i.test(targetLink)) {
+      return targetLink
+    }
+    return ''
+  }
+
+  if (isEmail(targetLink)) {
+    return `mailto:${targetLink}`
+  }
+
+  return `https://${targetLink}`
+}
+
+const findMatchingParen = (text, openIndex) => {
+  let depth = 0
+  for (let i = openIndex; i < text.length; i += 1) {
+    const char = text[i]
+    if (char === '(') {
+      depth += 1
+    } else if (char === ')') {
+      depth -= 1
+      if (depth === 0) {
+        return i
+      }
+    }
+  }
+  return -1
+}
+
+const findLinkSeparator = (text) => {
+  let depth = 0
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i]
+    if (char === '(') {
+      depth += 1
+    } else if (char === ')') {
+      depth = Math.max(0, depth - 1)
+    } else if (char === ',' && depth === 0) {
+      return i
+    }
+  }
+  return -1
+}
+
+const isAlphanumeric = (char) => /[a-zA-Z0-9]/.test(char)
+
+const isValidFormattingStart = (text, i, markerLength) => {
+  if (i > 0 && text[i - 1] !== ' ') {
+    return false
+  }
+
+  const nextIdx = i + markerLength
+  if (nextIdx >= text.length || text[nextIdx] === ' ') {
+    return false
+  }
+
+  return true
+}
+
+const isValidFormattingEnd = (text, i, markerLength) => {
+  if (i === 0 || text[i - 1] === ' ') {
+    return false
+  }
+
+  const nextIdx = i + markerLength
+  if (nextIdx < text.length && text[nextIdx] !== ' ' && isAlphanumeric(text[nextIdx])) {
+    return false
+  }
+
+  return true
+}
+
+const getStyleFlags = (style = 'normal') => ({
+  bold: style === 'bold' || style === 'bolditalic',
+  italic: style === 'italic' || style === 'bolditalic',
+})
+
+const getSegmentStyle = (segment, baseStyle = 'normal') => {
+  const baseFlags = getStyleFlags(baseStyle)
+  const isBold = Boolean(segment.bold || baseFlags.bold)
+  const isItalic = Boolean(segment.italic || baseFlags.italic)
+
+  if (isBold && isItalic) return 'bolditalic'
+  if (isBold) return 'bold'
+  if (isItalic) return 'italic'
+  return 'normal'
+}
+
+const measureSegments = (doc, segments, fontSize = 10, baseStyle = 'normal') =>
+  segments.reduce((total, segment) => {
+    doc.setFont('Calibri', getSegmentStyle(segment, baseStyle))
+    doc.setFontSize(fontSize)
+    return total + doc.getTextWidth(segment.text)
+  }, 0)
+
+const parseFormatting = (text) => {
+  if (typeof text !== 'string') {
+    text = String(text || '')
+  }
+
+  const segments = []
+  let currentBold = false
+  let currentItalic = false
+  let currentUnderline = false
+
+  let i = 0
+  let lastIndex = 0
+
+  while (i < text.length) {
+    if (text.startsWith('&link(', i)) {
+      const openIndex = i + 5
+      const closeIndex = findMatchingParen(text, openIndex)
+
+      if (closeIndex !== -1) {
+        const linkText = text.slice(openIndex + 1, closeIndex)
+        const separatorIndex = findLinkSeparator(linkText)
+
+        if (separatorIndex !== -1) {
+          const displayText = linkText.slice(0, separatorIndex).trim()
+          const rawUrl = linkText.slice(separatorIndex + 1).trim()
+
+          if (displayText) {
+            if (i > lastIndex) {
+              segments.push({
+                text: text.substring(lastIndex, i),
+                bold: currentBold,
+                italic: currentItalic,
+                underline: currentUnderline,
+                link: '',
+              })
+            }
+
+            segments.push({
+              text: displayText,
+              bold: currentBold,
+              italic: currentItalic,
+              underline: currentUnderline,
+              link: normalizeLink(rawUrl),
+            })
+
+            i = closeIndex + 1
+            lastIndex = i
+            continue
+          }
+        }
+      }
+
+      i += 1
+      continue
+    }
+
+    if (text.startsWith('__', i)) {
+      const isOpening = !currentUnderline
+      const isValid = isOpening
+        ? isValidFormattingStart(text, i, 2)
+        : isValidFormattingEnd(text, i, 2)
+
+      if (isValid) {
+        if (i > lastIndex) {
+          segments.push({
+            text: text.substring(lastIndex, i),
+            bold: currentBold,
+            italic: currentItalic,
+            underline: currentUnderline,
+            link: '',
+          })
+        }
+        currentUnderline = !currentUnderline
+        i += 2
+        lastIndex = i
+      } else {
+        i += 1
+      }
+    } else if (text[i] === '*') {
+      const isOpening = !currentBold
+      const isValid = isOpening
+        ? isValidFormattingStart(text, i, 1)
+        : isValidFormattingEnd(text, i, 1)
+
+      if (isValid) {
+        if (i > lastIndex) {
+          segments.push({
+            text: text.substring(lastIndex, i),
+            bold: currentBold,
+            italic: currentItalic,
+            underline: currentUnderline,
+            link: '',
+          })
+        }
+        currentBold = !currentBold
+        i += 1
+        lastIndex = i
+      } else {
+        i += 1
+      }
+    } else if (text[i] === '_') {
+      const isOpening = !currentItalic
+      const isValid = isOpening
+        ? isValidFormattingStart(text, i, 1)
+        : isValidFormattingEnd(text, i, 1)
+
+      if (isValid) {
+        if (i > lastIndex) {
+          segments.push({
+            text: text.substring(lastIndex, i),
+            bold: currentBold,
+            italic: currentItalic,
+            underline: currentUnderline,
+            link: '',
+          })
+        }
+        currentItalic = !currentItalic
+        i += 1
+        lastIndex = i
+      } else {
+        i += 1
+      }
+    } else {
+      i += 1
+    }
+  }
+
+  if (lastIndex < text.length) {
+    segments.push({
+      text: text.substring(lastIndex),
+      bold: currentBold,
+      italic: currentItalic,
+      underline: currentUnderline,
+      link: '',
+    })
+  }
+
+  return segments
+}
+
+const renderSegments = (doc, segments, startX, currentY, fontSize = 10, baseStyle = 'normal') => {
+  let cursorX = startX
+
+  segments.forEach((segment) => {
+    const style = getSegmentStyle(segment, baseStyle)
+    doc.setFont('Calibri', style)
+    doc.setFontSize(fontSize)
+    doc.setTextColor(segment.link ? 30 : 0, segment.link ? 99 : 0, segment.link ? 187 : 0)
+
+    if (segment.link) {
+      doc.textWithLink(segment.text, cursorX, currentY, { url: segment.link })
+    } else {
+      doc.text(segment.text, cursorX, currentY)
+    }
+
+    const segmentWidth = doc.getTextWidth(segment.text)
+    if (segment.underline || segment.link) {
+      doc.setDrawColor(segment.link ? 30 : 0, segment.link ? 99 : 0, segment.link ? 187 : 0)
+      doc.setLineWidth(0.6)
+      doc.line(cursorX, currentY + 1.5, cursorX + segmentWidth, currentY + 1.5)
+    }
+
+    cursorX += segmentWidth
+  })
+
+  doc.setTextColor(0, 0, 0)
+  doc.setDrawColor(0, 0, 0)
+
+  return cursorX - startX
+}
+
+const drawInlineText = (doc, text, x, currentY, options = {}) => {
+  const safeText = typeof text === 'string' ? text : String(text || '')
+  if (!safeText) {
+    return 0
+  }
+
+  const fontSize = options.fontSize || 10
+  const baseStyle = options.baseStyle || 'normal'
+  const segments = parseFormatting(safeText)
+  const totalWidth = measureSegments(doc, segments, fontSize, baseStyle)
+  let startX = x
+
+  if (options.align === 'center') {
+    startX = x - totalWidth / 2
+  } else if (options.align === 'right') {
+    startX = x - totalWidth
+  }
+
+  return renderSegments(doc, segments, startX, currentY, fontSize, baseStyle)
+}
+
 export async function generateResumePdfDoc(resume = defaultResume) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' })
   await loadCalibriFonts()
@@ -91,16 +397,16 @@ export async function generateResumePdfDoc(resume = defaultResume) {
   // ── Header (name, subtitle, contacts) ────────────────────────────────────
   doc.setFont('Calibri', 'bold')
   doc.setFontSize(18)
-  doc.text(resume.name, centerX, y, { align: 'center' })
+  drawInlineText(doc, resume.name, centerX, y, { align: 'center', fontSize: 18, baseStyle: 'bold' })
 
-  const nameWidth = doc.getTextWidth(resume.name)
+  const nameWidth = measureSegments(doc, parseFormatting(resume.name), 18, 'bold')
   doc.setLineWidth(1)
   doc.line(centerX - nameWidth / 2, y + 2, centerX + nameWidth / 2, y + 2)
 
   y += 18
   doc.setFont('Calibri', 'italic')
   doc.setFontSize(12)
-  doc.text(resume.subtitle, centerX, y, { align: 'center' })
+  drawInlineText(doc, resume.subtitle, centerX, y, { align: 'center', fontSize: 12, baseStyle: 'italic' })
 
   y += 14
   doc.setFont('Calibri', 'normal')
@@ -190,131 +496,6 @@ export async function generateResumePdfDoc(resume = defaultResume) {
 
   // ── Draw helpers ──────────────────────────────────────────────────────────
 
-  const isAlphanumeric = (char) => /[a-zA-Z0-9]/.test(char)
-  
-  const isValidFormattingStart = (text, i, markerLength) => {
-    // Opening marker must be preceded by start-of-line or space
-    if (i > 0 && text[i - 1] !== ' ') {
-      return false
-    }
-    
-    // Opening marker must be followed by non-space alphanumeric character
-    const nextIdx = i + markerLength
-    if (nextIdx >= text.length || text[nextIdx] === ' ') {
-      return false
-    }
-    
-    return true
-  }
-  
-  const isValidFormattingEnd = (text, i, markerLength) => {
-    // Closing marker must be preceded by non-space alphanumeric character
-    if (i === 0 || text[i - 1] === ' ') {
-      return false
-    }
-    
-    // Closing marker must be followed by space, non-alphanumeric, or end of string
-    const nextIdx = i + markerLength
-    if (nextIdx < text.length && text[nextIdx] !== ' ' && isAlphanumeric(text[nextIdx])) {
-      return false
-    }
-    
-    return true
-  }
-
-  const parseFormatting = (text) => {
-    if (typeof text !== 'string') {
-      text = String(text || '')
-    }
-    const segments = []
-    let currentBold = false
-    let currentItalic = false
-    let currentUnderline = false
-    
-    let i = 0
-    let lastIndex = 0
-    
-    while (i < text.length) {
-      if (text.startsWith('__', i)) {
-        const isOpening = !currentUnderline
-        const isValid = isOpening 
-          ? isValidFormattingStart(text, i, 2)
-          : isValidFormattingEnd(text, i, 2)
-        
-        if (isValid) {
-          if (i > lastIndex) {
-            segments.push({
-              text: text.substring(lastIndex, i),
-              bold: currentBold,
-              italic: currentItalic,
-              underline: currentUnderline
-            })
-          }
-          currentUnderline = !currentUnderline
-          i += 2
-          lastIndex = i
-        } else {
-          i += 1
-        }
-      } else if (text[i] === '*') {
-        const isOpening = !currentBold
-        const isValid = isOpening
-          ? isValidFormattingStart(text, i, 1)
-          : isValidFormattingEnd(text, i, 1)
-        
-        if (isValid) {
-          if (i > lastIndex) {
-            segments.push({
-              text: text.substring(lastIndex, i),
-              bold: currentBold,
-              italic: currentItalic,
-              underline: currentUnderline
-            })
-          }
-          currentBold = !currentBold
-          i += 1
-          lastIndex = i
-        } else {
-          i += 1
-        }
-      } else if (text[i] === '_') {
-        const isOpening = !currentItalic
-        const isValid = isOpening
-          ? isValidFormattingStart(text, i, 1)
-          : isValidFormattingEnd(text, i, 1)
-        
-        if (isValid) {
-          if (i > lastIndex) {
-            segments.push({
-              text: text.substring(lastIndex, i),
-              bold: currentBold,
-              italic: currentItalic,
-              underline: currentUnderline
-            })
-          }
-          currentItalic = !currentItalic
-          i += 1
-          lastIndex = i
-        } else {
-          i += 1
-        }
-      } else {
-        i += 1
-      }
-    }
-    
-    if (lastIndex < text.length) {
-      segments.push({
-        text: text.substring(lastIndex),
-        bold: currentBold,
-        italic: currentItalic,
-        underline: currentUnderline
-      })
-    }
-    
-    return segments
-  }
-
   const wrapSegments = (segments, maxWidth) => {
     const lines = []
     let currentLine = []
@@ -353,7 +534,8 @@ export async function generateResumePdfDoc(resume = defaultResume) {
           text: word,
           bold: seg.bold,
           italic: seg.italic,
-          underline: seg.underline
+          underline: seg.underline,
+          link: seg.link,
         })
         currentLineWidth += wordWidth
       })
@@ -379,23 +561,7 @@ export async function generateResumePdfDoc(resume = defaultResume) {
       let currentX = startX
       
       line.forEach((seg) => {
-        let style = 'normal'
-        if (seg.bold && seg.italic) style = 'bolditalic'
-        else if (seg.bold) style = 'bold'
-        else if (seg.italic) style = 'italic'
-        
-        doc.setFont('Calibri', style)
-        doc.setFontSize(10)
-        doc.text(seg.text, currentX, y)
-        
-        const segWidth = doc.getTextWidth(seg.text)
-        
-        if (seg.underline) {
-          doc.setLineWidth(0.6)
-          doc.line(currentX, y + 1.5, currentX + segWidth, y + 1.5)
-        }
-        
-        currentX += segWidth
+        currentX += renderSegments(doc, [seg], currentX, y)
       })
       
       y += lineHeight
@@ -426,7 +592,7 @@ export async function generateResumePdfDoc(resume = defaultResume) {
     checkPageBreak(36)
     doc.setFont('Calibri', 'bold')
     doc.setFontSize(12)
-    doc.text(title, leftX, y)
+    drawInlineText(doc, title, leftX, y, { fontSize: 12, baseStyle: 'bold' })
     y += 2
     doc.setDrawColor(0, 0, 0)
     doc.setLineWidth(0.8)
@@ -438,8 +604,8 @@ export async function generateResumePdfDoc(resume = defaultResume) {
     checkPageBreak(12)
     doc.setFont('Calibri', style)
     doc.setFontSize(11)
-    doc.text(leftText, leftX, y)
-    doc.text(rightText, rightX, y, { align: 'right' })
+    drawInlineText(doc, leftText, leftX, y, { fontSize: 11, baseStyle: style })
+    drawInlineText(doc, rightText, rightX, y, { align: 'right', fontSize: 11, baseStyle: style })
     y += 12
   }
 
@@ -447,8 +613,8 @@ export async function generateResumePdfDoc(resume = defaultResume) {
     checkPageBreak(11)
     doc.setFont('Calibri', 'italic')
     doc.setFontSize(10)
-    doc.text(leftText, leftX, y)
-    doc.text(rightText, rightX, y, { align: 'right' })
+    drawInlineText(doc, leftText, leftX, y, { fontSize: 10, baseStyle: 'italic' })
+    drawInlineText(doc, rightText, rightX, y, { align: 'right', fontSize: 10, baseStyle: 'italic' })
     y += 11
   }
 
@@ -560,7 +726,7 @@ export async function generateResumePdfDoc(resume = defaultResume) {
           checkPageBreak(12)
           doc.setFont('Calibri', 'normal')
           doc.setFontSize(10)
-          doc.text(section.items.join(' | '), leftX, y)
+          drawInlineText(doc, section.items.join(' | '), leftX, y)
           y += 12
         } else if (section.kind === 'paragraph') {
           drawSectionTitle(section.title)
@@ -622,7 +788,7 @@ export async function generateResumePdfDoc(resume = defaultResume) {
     checkPageBreak(12)
     doc.setFont('Calibri', 'normal')
     doc.setFontSize(10)
-    doc.text(resume.languages.join(' | '), leftX, y)
+    drawInlineText(doc, resume.languages.join(' | '), leftX, y)
   }
 
   return doc
