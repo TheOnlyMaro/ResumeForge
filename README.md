@@ -8,6 +8,7 @@ Local-first resume tailoring tool for rapidly generating targeted resumes from a
 - Toggle sections/items quickly
 - Local JSON persistence
 - PDF export
+- Inline text formatting and links with `*bold*`, `_italics_`, and `&link(text, url)`
 - Harvard-style resume template
 
 ## Tech Stack

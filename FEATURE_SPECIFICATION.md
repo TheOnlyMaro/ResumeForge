@@ -43,7 +43,7 @@ ResumeForge is a **local-first, single-page web application** for creating multi
     - `custom` – multi-line entries with title, subtitle, location, dates, bullet points
     - `education` – academic entries (school, degree, subtitle, location, dates, bullets)
     - `list` – simple key-value pairs
-    - `paragraph` – long-form text with markdown support (bold `*text*`, italic `_text_`)
+    - `paragraph` – long-form text with markdown support (bold `*text*`, italic `_text_`, links `&link(text, url)`)
     - `language` – simple string list
   - Indentation toggle (sections like "Profile" can be visually indented)
   - Add/Edit/Remove controls
@@ -103,7 +103,7 @@ ResumeForge is a **local-first, single-page web application** for creating multi
   - Contact row (email, LinkedIn, phone, location)
   - Section-based layout with proper spacing
   - Bullet points for details
-  - Support for markdown formatting in content (bold, italic)
+  - Support for markdown formatting in content (bold, italic, links via `&link(text, url)`)
   - Multi-page support with automatic page breaks
 - **Font Support**: Calibri font family (regular, bold, italic, bold-italic) embedded as TTF files
 - **Pagination**: Automatic page breaks when content exceeds page height
@@ -388,7 +388,7 @@ ResumeForge is a **local-first, single-page web application** for creating multi
     - Paragraph: full-width text with markdown parsing
     - Language: comma-separated list
     - List: key-value pairs
-- Markdown support (bold `*text*`, italic `_text_`)
+- Markdown support (bold `*text*`, italic `_text_`, links `&link(text, url)`)
 - Pagination logic with orphan prevention
 - Proper spacing and margins
 - Returns jsPDF document object
@@ -484,7 +484,7 @@ ResumeForge is a **local-first, single-page web application** for creating multi
 ### If rebuilding PDF module:
 - Must handle multi-page layout with orphan prevention
 - Font embedding for cross-platform consistency
-- Markdown parsing for text formatting
+- Markdown parsing for text formatting and inline links
 - Dynamic height calculation for overflow detection
 
 ### If rebuilding DND system:

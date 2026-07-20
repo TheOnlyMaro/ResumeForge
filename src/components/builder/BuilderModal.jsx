@@ -305,7 +305,7 @@ function BuilderModal({
                         }))
                       }
                       className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
-                      placeholder="Use *bold*, _italics_, or __underlines__ for custom formatting (one bullet per line)"
+                      placeholder="Use *bold*, _italics_, __underlines__, or &link(text, url) for custom formatting (one bullet per line)"
                     />
                   </label>
                 </>
@@ -382,7 +382,7 @@ function BuilderModal({
                         }))
                       }
                       className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
-                      placeholder="Use *bold*, _italics_, or __underlines__ for custom formatting (one detail per line)"
+                      placeholder="Use *bold*, _italics_, __underlines__, or &link(text, url) for custom formatting (one detail per line)"
                     />
                   </label>
                 </>
@@ -416,7 +416,7 @@ function BuilderModal({
                         }))
                       }
                       className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
-                      placeholder="Write your plain narrative text here... Use *bold*, _italics_, or __underlines__ for custom formatting."
+                      placeholder="Write your plain narrative text here... Use *bold*, _italics_, __underlines__, or &link(text, url) for custom formatting."
                     />
                   </label>
                 </>
@@ -434,7 +434,7 @@ function BuilderModal({
                       }))
                     }
                     className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
-                    placeholder="Use *bold*, _italics_, or __underlines__ for custom formatting (one language per line)"
+                    placeholder="Use *bold*, _italics_, __underlines__, or &link(text, url) for custom formatting (one language per line)"
                   />
                 </label>
               )}
